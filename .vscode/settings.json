@@ -1,0 +1,29 @@
+{
+    "files.associations": {
+        "string.h": "c",
+        "main.h": "c",
+        "stdint.h": "c",
+        "math.h": "c",
+        "serial.h": "c",
+        "idt.h": "c",
+        "stddef.h": "c",
+        "pmm.h": "c",
+        "vmm.h": "c",
+        "core.h": "c",
+        "sci.h": "c",
+        "pm.h": "c",
+        "pc-bios.h": "c",
+        "ec.h": "c",
+        "host.h": "c",
+        "acpi.h": "c",
+        "kernel_api.h": "c",
+        "types.h": "c",
+        "arch_helpers.h": "c",
+        "nanoprintf.h": "c",
+        "limine.h": "c",
+        "sched.h": "c",
+        "uacpi.h": "c",
+        "tables.h": "c",
+        "status.h": "c"
+    }
+}

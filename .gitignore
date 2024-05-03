@@ -1,0 +1,6 @@
+/limine
+/ovmf
+*.iso
+*.hdd
+kernel/src/ACPI/uACPI
+qemu_log.txt
