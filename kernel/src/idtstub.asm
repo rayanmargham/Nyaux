@@ -92,7 +92,6 @@ extern idt_handlers
 %endmacro
 
 isr_stub 0
-isr_stub 34
 isr_stub_error 14
 global isr_stub_32
 isr_stub_32:

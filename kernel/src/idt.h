@@ -29,5 +29,4 @@ struct IDTR
 extern void isr_stub_0();
 extern void isr_stub_14();
 extern void isr_stub_32();
-extern void isr_stub_34();
 void init_idt();

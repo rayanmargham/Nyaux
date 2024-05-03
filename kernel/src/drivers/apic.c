@@ -181,8 +181,8 @@ void apic_init()
     // DO NOTHING LOL
     serial_print("FINISHED WAITING 10MS\n");
     // PERIODIC, UNMASKED, VECTOR 34, TICK EVERY 10 MS LOL
-    write_lapic_register(lapic_addr, 0x380, lapic_ticks_per_10ms * 10);
-    write_lapic_register(lapic_addr, 0x320, 34 | (0 << 16) | (1 << 17));
+    write_lapic_register(lapic_addr, 0x380, lapic_ticks_per_10ms);
+    write_lapic_register(lapic_addr, 0x320, 32 | (0 << 16) | (1 << 17));
     for (;;)
     {
         // Do nothing lol

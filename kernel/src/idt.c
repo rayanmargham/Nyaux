@@ -54,29 +54,17 @@ void page_fault(struct StackFrame *frame)
 uint64_t sched_meow(struct StackFrame *frame)
 {
     switch_task(frame);
-    char buffer[64] = "";
-    serial_print("Frame Pointer: ");
-    serial_print(itoah(buffer, (uint64_t)frame));
-    serial_print("\n");
-    return (uint64_t)frame;
-}
-void timer_ticked(struct StackFrame *frame)
-{
-    serial_print("TICK!");
-    serial_print("\n");
     send_lapic_eoi();
-    
+    return (uint64_t)frame;
 }
 void init_idt()
 {
     set_interrupt_descriptor(0, isr_stub_0, 0x28, NYA_OS_IDT_PRESENT | NYA_OS_IDT_RING0 | NYA_OS_IDT_INTERRUPT);
     set_interrupt_descriptor(0xE, isr_stub_14, 0x28, NYA_OS_IDT_PRESENT | NYA_OS_IDT_RING0 | NYA_OS_IDT_INTERRUPT);
     set_interrupt_descriptor(0x20, isr_stub_32, 0x28, NYA_OS_IDT_PRESENT | NYA_OS_IDT_RING0 | NYA_OS_IDT_INTERRUPT);
-    set_interrupt_descriptor(0x22, isr_stub_34, 0x28, NYA_OS_IDT_PRESENT | NYA_OS_IDT_RING0 | NYA_OS_IDT_INTERRUPT);
     RegisterHandler(0, division_by_zero);
     RegisterHandler(14, page_fault);
     RegisterHandler(32, sched_meow);
-    RegisterHandler(34, timer_ticked);
     idtptr.size = sizeof(IDT);
     idtptr.offset = &IDT;
     idt_flush(&idtptr);

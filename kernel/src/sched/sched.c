@@ -13,17 +13,34 @@ void switch_context(struct StackFrame *frame, struct cpu_context_t *ctx)
 }
 volatile void switch_task(struct StackFrame *frame)
 {
-    if (current_thread->next)
+    if (current_thread != NULL)
     {
-        current_thread = current_thread->next;
+        if (current_thread->next)
+        {
+            current_thread = current_thread->next;
+        }
+        else
+        {
+            if (start_of_queue != NULL)
+            {
+                current_thread = start_of_queue;
+            }
+            else
+            {
+                serial_print("NOTHING TO SWITCH TO LOL, RETTING\n");
+                return; // QUEUES EMPTY, RETURN AND DO NOTHING
+            }
+        }
+        switch_context(frame, current_thread->context);
+        pml4 = current_thread->context->pagemap;
+        update_cr3((uint64_t)pml4);
     }
     else
     {
-        current_thread = start_of_queue;
+        serial_print_color("Scheduler: Nothing to switch to!\n", 2);
+        return;
     }
-    switch_context(frame, current_thread->context);
-    pml4 = current_thread->context->pagemap;
-    update_cr3((uint64_t)pml4);
+
 }
 struct cpu_context_t *new_context(uint64_t entry_func, uint64_t rsp, uint64_t pagemap, bool user)
 
