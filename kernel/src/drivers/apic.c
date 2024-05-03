@@ -85,6 +85,11 @@ void apic_init()
             case ACPI_MADT_ENTRY_TYPE_IOAPIC:
                 struct acpi_madt_ioapic *c = ent;
                 ioapic = c;
+                serial_print("THIS IOAPIC HANDLES GSI: ");
+                serial_print(itoa(wow, ioapic->gsi_base));
+                serial_print(" TO GSI: ");
+                serial_print(itoa(wow, ioapic->gsi_base));
+                serial_print("\n");
                 break;
             case ACPI_MADT_ENTRY_TYPE_LAPIC_NMI:
                 struct acpi_madt_lapic_nmi *e = ent;
@@ -183,10 +188,6 @@ void apic_init()
     // PERIODIC, UNMASKED, VECTOR 34, TICK EVERY 10 MS LOL
     write_lapic_register(lapic_addr, 0x380, lapic_ticks_per_10ms);
     write_lapic_register(lapic_addr, 0x320, 32 | (0 << 16) | (1 << 17));
-    for (;;)
-    {
-        // Do nothing lol
-    }
 
 
 }

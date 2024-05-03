@@ -7,6 +7,8 @@
 #include "ACPI/acpi.h"
 #include "sched/sched.h"
 #include "drivers/apic.h"
+#define NANOPRINTF_IMPLEMENTATION
+#include <lib/nanoprintf.h>
 // Set the base revision to 1, this is recommended as this is the latest
 // base revision described by the Limine boot protocol specification.
 // See specification for further info.
@@ -260,6 +262,21 @@ void write_color(struct flanterm_context *ctx, char *buf, int type)
         break;
     }
 }
+void kputc(int ch, void*)
+{
+    if (ctx != NULL)
+    {
+        char c = ch;
+        flanterm_write(ctx, &c, 1);
+    }
+}
+void kprintf(const char* format, ...)
+{
+    va_list args;
+    va_start (args, format);
+    npf_vpprintf(kputc, NULL, format, args);
+    va_end(args);
+}
 
 // The following will be our kernel's entry point.
 // If renaming _start() to something else, make sure to change the
@@ -305,11 +322,12 @@ void _start(void) {
     volatile uint32_t *img = module_request.response->modules[0]->address;
     acpi_init();
     ctx->deinit(ctx, NULL);
-    
     ctx = flanterm_fb_init(kmalloc, kfree, framebuffer->address, framebuffer->width, framebuffer->height, framebuffer->pitch, framebuffer->red_mask_size, framebuffer->red_mask_shift, framebuffer->green_mask_size, framebuffer->green_mask_shift, framebuffer->blue_mask_size, framebuffer->blue_mask_shift, img, NULL, NULL, &bg, NULL, NULL, NULL, NULL, 0, 0, 1, 0, 0, 0);
     write(ctx, "\e[mAmazing!\n");
+    kprintf("PrintF Test: %s\n", "meow");
     apic_init();
-    // sched_init();
+    
+    sched_init();
     // We're done, just hang...
     hcf();
 }

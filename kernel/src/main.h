@@ -19,4 +19,5 @@ size_t strnlen(const char *s, size_t maxlen);
 size_t strlen(const char *str);
 int strcmp(const char *s1, const char *s2);
 int strncmp(s1, s2, n);
+void kprintf(const char* format, ...);
 extern struct flanterm_context *ctx;

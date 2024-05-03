@@ -4,8 +4,6 @@
 #include "vmm.h"
 #include "pmm.h"
 #include <uacpi/kernel_api.h>
-#define NANOPRINTF_IMPLEMENTATION
-#include <lib/nanoprintf.h>
 #include <drivers/apic.h>
 static bool isPower2(uint64_t num)
 {
@@ -182,7 +180,8 @@ void uacpi_kernel_stall(uacpi_u8 usec)
 }
 void uacpi_kernel_sleep(uacpi_u64 msec)
 {
-    ksleep(msec);
+    // WOULD BLOCK THREAD BUT SCHEDULER DOESNT HAVE THAT ATM LOL
+    // SET CUR THREAD STATE TO BLOCKED
 }
 uacpi_handle uacpi_kernel_create_mutex(void)
 {
