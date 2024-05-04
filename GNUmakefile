@@ -14,7 +14,7 @@ define DEFAULT_VAR =
 endef
 
 # Toolchain for building the 'limine' executable for the host.
-override DEFAULT_HOST_CC := $(HOME)/opt/cross/bin/x86_64-elf-gcc
+override DEFAULT_HOST_CC := cc
 $(eval $(call DEFAULT_VAR,HOST_CC,$(DEFAULT_HOST_CC)))
 override DEFAULT_HOST_CFLAGS := -g -O2 -pipe
 $(eval $(call DEFAULT_VAR,HOST_CFLAGS,$(DEFAULT_HOST_CFLAGS)))
@@ -33,10 +33,10 @@ all-hdd: $(IMAGE_NAME).hdd
 
 .PHONY: run
 run: $(IMAGE_NAME).iso
-	@sudo qemu-system-x86_64 $(IMAGE_NAME).iso -M q35 -bios /usr/share/edk2-ovmf/OVMF_CODE.fd -m 3G -accel tcg -serial stdio
+	@sudo qemu-system-x86_64 $(IMAGE_NAME).iso -M q35 -bios /usr/share/edk2-ovmf/x64/OVMF_CODE.fd -m 3G -accel tcg -serial stdio
 .PHONY: run_debug
 run_debug: $(IMAGE_NAME).iso
-	@sudo qemu-system-x86_64 $(IMAGE_NAME).iso -M q35 -bios /usr/share/edk2-ovmf/OVMF_CODE.fd -m 3G -d int -S -s
+	@sudo qemu-system-x86_64 $(IMAGE_NAME).iso -M q35 -bios /usr/share/edk2-ovmf/x64/OVMF_CODE.fd -m 3G -d int -S -s
 
 ovmf:
 	mkdir -p ovmf

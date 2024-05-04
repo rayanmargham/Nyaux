@@ -25,6 +25,9 @@
         "uacpi.h": "c",
         "tables.h": "c",
         "status.h": "c",
-        "apic.h": "c"
+        "apic.h": "c",
+        "compare": "c",
+        "cstdint": "c",
+        "format": "c"
     }
 }

@@ -60,7 +60,7 @@ void acpi_init()
    uint64_t rsdp = (uint64_t)rsdp_request.response->address - hhdm_request.response->offset;
    struct uacpi_init_params params = {
       rsdp,
-      { UACPI_LOG_TRACE, 0 }
+      { UACPI_LOG_INFO, 0 }
    };
    uacpi_status st = uacpi_initialize(&params);
    if (st == UACPI_STATUS_OK)
