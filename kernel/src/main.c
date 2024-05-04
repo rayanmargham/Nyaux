@@ -7,6 +7,12 @@
 #include "ACPI/acpi.h"
 #include "sched/sched.h"
 #include "drivers/apic.h"
+#define NANOPRINTF_USE_FIELD_WIDTH_FORMAT_SPECIFIERS 1
+#define NANOPRINTF_USE_PRECISION_FORMAT_SPECIFIERS 1
+#define NANOPRINTF_USE_FLOAT_FORMAT_SPECIFIERS 0
+#define NANOPRINTF_USE_LARGE_FORMAT_SPECIFIERS 0
+#define NANOPRINTF_USE_BINARY_FORMAT_SPECIFIERS 0
+#define NANOPRINTF_USE_WRITEBACK_FORMAT_SPECIFIERS 0
 #define NANOPRINTF_IMPLEMENTATION
 #include <lib/nanoprintf.h>
 #include <lib/kpanic.h>
@@ -282,7 +288,6 @@ void kprintf(const char* format, ...)
 // The following will be our kernel's entry point.
 // If renaming _start() to something else, make sure to change the
 // linker script accordingly.
-
 void _start(void) {
     uint32_t bg = 0x000000;
     // Ensure the bootloader actually understands our base revision (see spec).
@@ -314,12 +319,9 @@ void _start(void) {
     init_serial();
     init_idt();
     write_color(ctx, "IDT Initialized!\n", 1);
-    serial_print_color("IDT Initialized!\n", 1);
     pmm_init();
     write_color(ctx, "PMM Initialized!\n", 1);
-    serial_print_color("PMM Initialized!\n", 1);
     vmm_init();
-    serial_print_color("VMM Initialized!\n", 1);
     if (module_request.response->module_count != 0)
     {
         volatile uint32_t *img = module_request.response->modules[0]->address;
@@ -331,17 +333,11 @@ void _start(void) {
         kprintf("Framebuffer Width: %d, Height: %d\n", framebuffer->width, framebuffer->height);
         kprintf("Size of framebuffer in memory (bytes): %d\n", framebuffer->height * framebuffer->width * 4);
         kprintf("Size of Image Module: %d\n", module_request.response->modules[0]->size - 4);
-        for (;;)
-        {
-            asm ("hlt");
-        }
         ctx->deinit(ctx, NULL);
-        // SHOULD PAGE FAULT LOL
         ctx = flanterm_fb_init(kmalloc, kfree, framebuffer->address, framebuffer->width, framebuffer->height, framebuffer->pitch, framebuffer->red_mask_size, framebuffer->red_mask_shift, framebuffer->green_mask_size, framebuffer->green_mask_shift, framebuffer->blue_mask_size, framebuffer->blue_mask_shift, img, NULL, NULL, &bg, NULL, NULL, NULL, NULL, 0, 0, 1, 0, 0, 0);
     }
     e:
     acpi_init();
-    
     write(ctx, "\e[mAmazing!\n");
     kprintf("PrintF Test: %s\n", "meow");
     apic_init();

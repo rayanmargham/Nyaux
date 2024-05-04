@@ -50,6 +50,7 @@ override CFLAGS += \
     -fno-stack-protector \
     -fno-stack-check \
     -fno-lto \
+    -fno-omit-frame-pointer \
     -fPIE \
     -m64 \
     -march=x86-64-v2 \

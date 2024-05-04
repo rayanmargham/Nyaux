@@ -166,9 +166,7 @@ void uacpi_kernel_vlog(enum uacpi_log_level level, const char* format, uacpi_va_
 		default:
 			break;
 		}
-    char buf[128] = "";
-    npf_vsnprintf(buf, 128, format, list);
-    serial_print(buf);
+    npf_vpprintf(kputc, NULL, format, list);
 }
 uacpi_u64 uacpi_kernel_get_ticks(void)
 {

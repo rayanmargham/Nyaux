@@ -12,3 +12,4 @@ uint32_t ind(uint16_t port);
 void outd(uint16_t port, uint32_t data);
 void serial_print(char *str);
 void serial_print_color(char *str, int type);
+void print_charserial(char chara);

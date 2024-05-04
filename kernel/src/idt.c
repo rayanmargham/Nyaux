@@ -42,16 +42,6 @@ void division_by_zero(struct StackFrame *frame)
 void page_fault(struct StackFrame *frame)
 {
     kpanic("PAGE FAULT VIOLATION", frame);
-    serial_print_color("Page Fault!\n", 4);
-    char error[64] = "";
-    serial_print_color(itoa(error, frame->error_code), 4);
-    serial_print("\n");
-    serial_print_color(itoah(error, frame->rip), 4);
-    serial_print("\n");
-    asm ("cli");
-    for (;;) {
-        asm ("hlt");
-    }
 }
 
 uint64_t sched_meow(struct StackFrame *frame)
