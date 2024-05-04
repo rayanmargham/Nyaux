@@ -3,6 +3,7 @@
 #include "main.h"
 #include "sched/sched.h"
 #include "drivers/apic.h"
+#include <lib/kpanic.h>
 
 void (*idt_handlers[256])(struct StackFrame *frame);
 
@@ -32,6 +33,7 @@ void RegisterHandler(int interrupt, void(*handler)(struct StackFrame *frame))
 
 void division_by_zero(struct StackFrame *frame)
 {
+    kpanic("DIVISON BY ZERO", frame);
     asm ("cli");
     for (;;) {
         asm ("hlt");
@@ -39,6 +41,7 @@ void division_by_zero(struct StackFrame *frame)
 }
 void page_fault(struct StackFrame *frame)
 {
+    kpanic("PAGE FAULT VIOLATION", frame);
     serial_print_color("Page Fault!\n", 4);
     char error[64] = "";
     serial_print_color(itoa(error, frame->error_code), 4);

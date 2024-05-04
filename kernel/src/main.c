@@ -9,6 +9,7 @@
 #include "drivers/apic.h"
 #define NANOPRINTF_IMPLEMENTATION
 #include <lib/nanoprintf.h>
+#include <lib/kpanic.h>
 // Set the base revision to 1, this is recommended as this is the latest
 // base revision described by the Limine boot protocol specification.
 // See specification for further info.
@@ -319,15 +320,35 @@ void _start(void) {
     serial_print_color("PMM Initialized!\n", 1);
     vmm_init();
     serial_print_color("VMM Initialized!\n", 1);
-    volatile uint32_t *img = module_request.response->modules[0]->address;
+    if (module_request.response->module_count != 0)
+    {
+        volatile uint32_t *img = module_request.response->modules[0]->address;
+        // very hacky but should solve issues
+        if (module_request.response->modules[0]->size - 4 != framebuffer->height * framebuffer->width * 4)
+        {
+            goto e;
+        }
+        kprintf("Framebuffer Width: %d, Height: %d\n", framebuffer->width, framebuffer->height);
+        kprintf("Size of framebuffer in memory (bytes): %d\n", framebuffer->height * framebuffer->width * 4);
+        kprintf("Size of Image Module: %d\n", module_request.response->modules[0]->size - 4);
+        for (;;)
+        {
+            asm ("hlt");
+        }
+        ctx->deinit(ctx, NULL);
+        // SHOULD PAGE FAULT LOL
+        ctx = flanterm_fb_init(kmalloc, kfree, framebuffer->address, framebuffer->width, framebuffer->height, framebuffer->pitch, framebuffer->red_mask_size, framebuffer->red_mask_shift, framebuffer->green_mask_size, framebuffer->green_mask_shift, framebuffer->blue_mask_size, framebuffer->blue_mask_shift, img, NULL, NULL, &bg, NULL, NULL, NULL, NULL, 0, 0, 1, 0, 0, 0);
+    }
+    e:
     acpi_init();
-    ctx->deinit(ctx, NULL);
-    ctx = flanterm_fb_init(kmalloc, kfree, framebuffer->address, framebuffer->width, framebuffer->height, framebuffer->pitch, framebuffer->red_mask_size, framebuffer->red_mask_shift, framebuffer->green_mask_size, framebuffer->green_mask_shift, framebuffer->blue_mask_size, framebuffer->blue_mask_shift, img, NULL, NULL, &bg, NULL, NULL, NULL, NULL, 0, 0, 1, 0, 0, 0);
+    
     write(ctx, "\e[mAmazing!\n");
     kprintf("PrintF Test: %s\n", "meow");
     apic_init();
-    
     sched_init();
+    for (;;) {
+        asm("hlt");
+    }
     // We're done, just hang...
     hcf();
 }

@@ -24,6 +24,7 @@
         "sched.h": "c",
         "uacpi.h": "c",
         "tables.h": "c",
-        "status.h": "c"
+        "status.h": "c",
+        "apic.h": "c"
     }
 }

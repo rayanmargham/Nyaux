@@ -27,7 +27,11 @@ volatile uint32_t read_ioapic_selectedregister()
     // READ WRITE REGISTER HAS OFFSET 10h
     return *(volatile uint32_t*)(ioapic->address + 0x10 + hhdm_request.response->offset);
 }
-
+uint8_t get_ioapic_maxgsi()
+{
+    select_ioapic_register(0x1);
+    return (read_ioapic_selectedregister() >> 16) & 0xff;
+}
 volatile uint32_t read_lapic_register(uint32_t lapic_base, uint16_t reg_offset)
 {
     return *(volatile uint32_t*)(lapic_base + reg_offset + hhdm_request.response->offset);
@@ -83,12 +87,22 @@ void apic_init()
                 serial_print("\n");
                 break;
             case ACPI_MADT_ENTRY_TYPE_IOAPIC:
+                if (ioapic)
+                {
+                    serial_print("MULTIPLE IOAPICS, SHIT MY PANTS WE GIVE UP\n");
+                    write_color(ctx, "SHIT MY PANTS, TOO MANY IOAPICS FUCK THIS\n", 4);
+                    asm("cli"); // disable interrupts
+                    for (;;)
+                    {
+                        asm ("hlt");
+                    }
+                }
                 struct acpi_madt_ioapic *c = ent;
                 ioapic = c;
                 serial_print("THIS IOAPIC HANDLES GSI: ");
                 serial_print(itoa(wow, ioapic->gsi_base));
                 serial_print(" TO GSI: ");
-                serial_print(itoa(wow, ioapic->gsi_base));
+                serial_print(itoa(wow, get_ioapic_maxgsi()));
                 serial_print("\n");
                 break;
             case ACPI_MADT_ENTRY_TYPE_LAPIC_NMI:
