@@ -3,6 +3,7 @@
 #include "drivers/serial.h"
 #include "vmm.h"
 #include "pmm.h"
+#include "drivers/ps2.h"
 
 struct thread_t *start_of_queue;
 struct thread_t *current_thread;
@@ -87,30 +88,44 @@ struct thread_t *create_thread(struct cpu_context_t *it)
 }
 void kthread_start()
 {
-    serial_print("HELLO WORLD FROM KERNEL THREAD!!!!!\n");
-    serial_print("meow\n");
-    for (;;) {
-        asm("hlt");
-    }
-}
-void kthread_poop()
-{
-    serial_print("HI FROM THE SECOND THREAD, WE HAVE 2 THREADS RUNNING ISNT THAT CRAZY MULTITASKING AM RIGHT???\n");
-    serial_print("meow\n");
-    for (;;) {
-        asm("hlt");
+    kprintf("%p\n", &event_count);
+    while (true)
+    {
+        if (event_count > 0)
+        {
+            event_count--;
+            struct KeyboardEvent event = events[event_count];
+            if (event.printable)
+            {
+                kprintf("Key Pressed %c\n", event.printable);
+            }
+            else
+            {
+                switch (event.key)
+                {
+                case KEY_ESCAPE:
+                    kprintf("KEY ESCAPE PRESSED!\n", event.key);
+                    break;
+                
+                default:
+                    break;
+                }
+            }
+            
+            
+        }
     }
 }
 void sched_init()
 {
     // uint64_t *new_poop = (uint64_t)(((uint64_t)pmm_alloc_singlep() + hhdm_request.response->offset) + 4096);
-    // uint64_t *new_kstack = (uint64_t)(((uint64_t)pmm_alloc_singlep() + hhdm_request.response->offset) + 4096); // CAUSE STACK GROWS DOWNWARDS
-    // struct cpu_context_t *ctx = new_context((uint64_t)kthread_start, (uint64_t)new_kstack, (uint64_t)pml4, false);
+    uint64_t *new_kstack = (uint64_t)(((uint64_t)pmm_alloc_singlep() + hhdm_request.response->offset) + 4096); // CAUSE STACK GROWS DOWNWARDS
+    struct cpu_context_t *ctx = new_context((uint64_t)kthread_start, (uint64_t)new_kstack, (uint64_t)pml4, false);
     // struct cpu_context_t *timeforpoop = new_context((uint64_t)kthread_poop, (uint64_t)new_poop, pml4, false);
     // serial_print("Created New CPU Context for Kernel Thread\n");
     // serial_print("attempting to create kthread...\n");
-    // struct thread_t *kthread = create_thread(ctx);
-    // start_of_queue = kthread;
+    struct thread_t *kthread = create_thread(ctx);
+    start_of_queue = kthread;
     // // lets create another thread trollage
     // struct thread_t *pooper = create_thread(timeforpoop);
     // kthread->next = pooper;

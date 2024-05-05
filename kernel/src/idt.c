@@ -9,6 +9,8 @@ void (*idt_handlers[256])(struct StackFrame *frame);
 
 struct IDTGateDescriptor IDT[256];
 struct IDTR idtptr;
+extern uint64_t stubs[];
+int cur_vec_free = 32;
 #define NYA_OS_IDT_PRESENT (1 << 7)
 #define NYA_OS_IDT_RING0 (0 << 5)
 #define NYA_OS_IDT_RING3 (0 << 5)
@@ -30,7 +32,10 @@ void RegisterHandler(int interrupt, void(*handler)(struct StackFrame *frame))
 {
     idt_handlers[interrupt] = handler;
 }
-
+int AllocateVector()
+{
+    return cur_vec_free++;
+}
 void division_by_zero(struct StackFrame *frame)
 {
     kpanic("DIVISON BY ZERO", frame);
@@ -52,12 +57,13 @@ uint64_t sched_meow(struct StackFrame *frame)
 }
 void init_idt()
 {
-    set_interrupt_descriptor(0, isr_stub_0, 0x28, NYA_OS_IDT_PRESENT | NYA_OS_IDT_RING0 | NYA_OS_IDT_INTERRUPT);
-    set_interrupt_descriptor(0xE, isr_stub_14, 0x28, NYA_OS_IDT_PRESENT | NYA_OS_IDT_RING0 | NYA_OS_IDT_INTERRUPT);
-    set_interrupt_descriptor(0x20, isr_stub_32, 0x28, NYA_OS_IDT_PRESENT | NYA_OS_IDT_RING0 | NYA_OS_IDT_INTERRUPT);
+    for (int i = 0; i < 256; i++)
+    {
+        set_interrupt_descriptor(i, stubs[i], 0x28, NYA_OS_IDT_INTERRUPT | NYA_OS_IDT_PRESENT | NYA_OS_IDT_RING3);
+    }
     RegisterHandler(0, division_by_zero);
     RegisterHandler(14, page_fault);
-    RegisterHandler(32, sched_meow);
+    RegisterHandler(AllocateVector(), sched_meow);
     idtptr.size = sizeof(IDT);
     idtptr.offset = &IDT;
     idt_flush(&idtptr);

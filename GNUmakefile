@@ -33,10 +33,10 @@ all-hdd: $(IMAGE_NAME).hdd
 
 .PHONY: run
 run: $(IMAGE_NAME).iso
-	@sudo qemu-system-x86_64 $(IMAGE_NAME).iso -M q35 -bios /usr/share/edk2-ovmf/x64/OVMF_CODE.fd -m 3G -accel tcg -serial stdio
+	@sudo qemu-system-x86_64 $(IMAGE_NAME).iso -M q35 -bios /usr/share/edk2-ovmf/x64/OVMF_CODE.fd -m 1G -accel tcg -serial stdio
 .PHONY: run_debug
 run_debug: $(IMAGE_NAME).iso
-	@sudo qemu-system-x86_64 $(IMAGE_NAME).iso -M q35 -bios /usr/share/edk2-ovmf/x64/OVMF_CODE.fd -m 3G -d int -S -s
+	@sudo qemu-system-x86_64 $(IMAGE_NAME).iso -M q35 -bios /usr/share/edk2-ovmf/x64/OVMF_CODE.fd -m 1G -d int -S -s -D qemu.txt
 
 ovmf:
 	mkdir -p ovmf

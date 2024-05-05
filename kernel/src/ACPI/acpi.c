@@ -66,6 +66,7 @@ void acpi_init()
    if (st == UACPI_STATUS_OK)
    {
       st = uacpi_namespace_load();
+      st = uacpi_namespace_initialize();
       
    }
    else

@@ -179,6 +179,7 @@ void *slab_alloc(struct cache *cache)
     {
         if (h->freelist != NULL)
         {
+            char shit[64];
             struct pmm_node *him = h->freelist;
             h->freelist = him->next;
             return him;
@@ -198,6 +199,7 @@ void *slab_alloc(struct cache *cache)
     h->next = new_slab;
     struct pmm_node *we = new_slab->freelist;
     new_slab->freelist = new_slab->freelist->next;
+    char shit[64];
     return we;
 }
 void free(void *addr)

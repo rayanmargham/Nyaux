@@ -5,12 +5,15 @@
 #include "pmm.h"
 #include "vmm.h"
 #include "ACPI/acpi.h"
+#include <uacpi/types.h>
 #include "sched/sched.h"
+#include "bump.h"
 #include "drivers/apic.h"
+#include "drivers/ps2.h"
 #define NANOPRINTF_USE_FIELD_WIDTH_FORMAT_SPECIFIERS 1
 #define NANOPRINTF_USE_PRECISION_FORMAT_SPECIFIERS 1
 #define NANOPRINTF_USE_FLOAT_FORMAT_SPECIFIERS 0
-#define NANOPRINTF_USE_LARGE_FORMAT_SPECIFIERS 0
+#define NANOPRINTF_USE_LARGE_FORMAT_SPECIFIERS 1
 #define NANOPRINTF_USE_BINARY_FORMAT_SPECIFIERS 0
 #define NANOPRINTF_USE_WRITEBACK_FORMAT_SPECIFIERS 0
 #define NANOPRINTF_IMPLEMENTATION
@@ -277,6 +280,7 @@ void kputc(int ch, void*)
         flanterm_write(ctx, &c, 1);
     }
 }
+UACPI_PRINTF_DECL(1, 2)
 void kprintf(const char* format, ...)
 {
     va_list args;
@@ -341,6 +345,7 @@ void _start(void) {
     write(ctx, "\e[mAmazing!\n");
     kprintf("PrintF Test: %s\n", "meow");
     apic_init();
+    ps2_init();
     sched_init();
     for (;;) {
         asm("hlt");

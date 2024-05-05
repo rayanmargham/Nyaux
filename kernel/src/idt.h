@@ -26,7 +26,6 @@ struct IDTR
     uint64_t offset;
 } __attribute__ ((packed));
 
-extern void isr_stub_0();
-extern void isr_stub_14();
-extern void isr_stub_32();
+void RegisterHandler(int interrupt, void(*handler)(struct StackFrame *frame));
+int AllocateVector();
 void init_idt();

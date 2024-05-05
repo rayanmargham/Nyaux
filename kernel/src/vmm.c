@@ -149,6 +149,7 @@ void *vmm_region_alloc(uint64_t size, uint8_t flags)
                 memset(page + hhdm_request.response->offset, 0, 4096);
                 map((uint64_t)pml4 + hhdm_request.response->offset, new_guy->base + (i * 0x1000), page, flags);
             }
+            
             return new_guy->base;
 
         }
@@ -175,6 +176,7 @@ uint64_t get_phys_from_entry(uint64_t pte)
 }
 void vmm_region_dealloc(uint64_t base)
 {
+    
     struct vmm_region *cur_node = vmm_head; // find prev node and node after it
     struct vmm_region *prev_prev_node = NULL;
     while(cur_node != NULL)

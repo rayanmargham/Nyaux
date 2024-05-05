@@ -7,42 +7,58 @@
 #include <uacpi/acpi.h>
 #include <vmm.h>
 #include <pmm.h>
-struct acpi_madt_ioapic *ioapic;
+#include <idt.h>
 uint32_t lapic_addr;
 uint64_t hpet_addrs;
 uint64_t time_per_tick_hpet;
 uint64_t lapic_ticks_per_10ms;
-volatile void select_ioapic_register(uint8_t ioapic_reg)
+struct ioapic
+{
+  struct acpi_madt_ioapic *ioapic_info; // POINTER TO TABLE ABOUT THIS IOAPIC IN THE MADT
+  uint64_t max_gsi;
+};
+struct ioapic ioapics[16];
+size_t ioapiccount = 0;
+struct iso 
+{
+    struct acpi_madt_interrupt_source_override *iso;
+};
+struct iso isos[256];
+void select_ioapic_register(struct ioapic *theioapic, uint8_t ioapic_reg)
 {
     // SELECTION REGISTER HAS OFFSET 0
-    *(volatile uint32_t*)(ioapic->address + hhdm_request.response->offset) = ioapic_reg;
+    *(volatile uint32_t*)(theioapic->ioapic_info->address + hhdm_request.response->offset) = ioapic_reg;
 }
-volatile void write_ioapic_selectedregister(uint32_t data)
+void write_ioapic_selectedregister(struct ioapic *theioapic, uint32_t data)
 {
     // READ WRITE REGISTER HAS OFFSET 10h
-    *(volatile uint32_t*)(ioapic->address + 0x10 + hhdm_request.response->offset) = data;
+    *(volatile uint32_t*)(theioapic->ioapic_info->address + 0x10 + hhdm_request.response->offset) = data;
 }
-volatile uint32_t read_ioapic_selectedregister()
+uint32_t read_ioapic_selectedregister(struct ioapic *theioapic)
 {
     // READ WRITE REGISTER HAS OFFSET 10h
-    return *(volatile uint32_t*)(ioapic->address + 0x10 + hhdm_request.response->offset);
+    return *(volatile uint32_t*)(theioapic->ioapic_info->address + 0x10 + hhdm_request.response->offset);
 }
-uint8_t get_ioapic_maxgsi()
+uint8_t get_ioapic_maxgsi(struct ioapic *e)
 {
-    select_ioapic_register(0x1);
-    return (read_ioapic_selectedregister() >> 16) & 0xff;
+    select_ioapic_register(e, 0x1);
+    return (read_ioapic_selectedregister(e) >> 16) & 0xff;
 }
-volatile uint32_t read_lapic_register(uint32_t lapic_base, uint16_t reg_offset)
+uint32_t read_lapic_register(uint32_t lapic_base, uint16_t reg_offset)
 {
     return *(volatile uint32_t*)(lapic_base + reg_offset + hhdm_request.response->offset);
 }
-volatile void write_lapic_register(uint32_t lapic_base, uint16_t reg_offset, uint32_t data)
+void write_lapic_register(uint32_t lapic_base, uint16_t reg_offset, uint32_t data)
 {
     *(volatile uint32_t*)(lapic_base + reg_offset + hhdm_request.response->offset) = data;
 }
 void send_lapic_eoi()
 {
     write_lapic_register(lapic_addr, 0xb0, 0);
+}
+uint32_t get_lapic_id()
+{
+    return read_lapic_register(lapic_addr, 0x20);
 }
 void ksleep(uint64_t ms)
 {
@@ -53,6 +69,46 @@ void ksleep(uint64_t ms)
         
     }
 }
+
+bool route_irq(uint8_t irq, uint32_t lapic_id, uint8_t vec)
+{
+    uint8_t gsi = irq;
+    uint16_t flags = 0;
+    if (isos[irq].iso != NULL)
+    {
+        gsi = isos[irq].iso->gsi;
+        flags = isos[irq].iso->flags;
+    }
+    struct ioapic *he = NULL;
+    for (int i = 0; i < ioapiccount; i++)
+    {
+        if (ioapics[i].ioapic_info->gsi_base <= gsi && (ioapics[i].ioapic_info->gsi_base + ioapics[i].max_gsi) > gsi)
+        {
+            he = &ioapics[i];
+        }
+    }
+    if (he == NULL)
+    {
+        return false;
+    }
+    uint64_t meow = (vec | (0b000 << 8) | (0 << 11));
+    if ((flags & 0b11) == 0b11)
+    {
+        meow |= (1 << 13);
+    }
+    if (((flags >> 2) & 0b11) == 0b11)
+    {
+        meow |= (1 << 15);
+    }
+    meow |= ((uint64_t)lapic_id << 56);
+    select_ioapic_register(he, 0x10 + ((gsi - he->ioapic_info->gsi_base)* 0x02));
+    write_ioapic_selectedregister(he, ((uint32_t)meow));
+    select_ioapic_register(he, 0x10 + ((gsi - he->ioapic_info->gsi_base)* 0x02) + 1);
+    write_ioapic_selectedregister(he, (uint32_t)(meow >> 32));
+    return true; 
+
+
+}
 void apic_init()
 {
     // ?
@@ -61,49 +117,23 @@ void apic_init()
     uacpi_table *table;
     uacpi_table_find_by_signature(ACPI_MADT_SIGNATURE, &table);
     struct acpi_madt *madt = table->virt_addr;
-    serial_print("local apic addr?: ");
-    serial_print(itoah(wow, madt->local_interrupt_controller_address));
-    serial_print("\n");
     uint64_t length_of_entries = madt->hdr.length - sizeof(*madt);
     size_t offset = 0;
     while (offset < length_of_entries)
     {
         struct acpi_entry_hdr *ent = (void*)madt->entries + offset;
-        serial_print("WE GOT AN ENTRY!: TYPE!: ");
-        serial_print(itoa(wow, ent->type));
-        serial_print("\n");
         switch (ent->type)
         {
             case ACPI_MADT_ENTRY_TYPE_INTERRUPT_SOURCE_OVERRIDE:
-                serial_print("COMING FROM BUS: ");
                 
                 struct acpi_madt_interrupt_source_override *ohcool = ent;
-                serial_print("BUS: ");
-                serial_print(itoa(wow, ohcool->bus));
-                serial_print(" IRQ SOURCE: ");
-                serial_print(itoa(wow, ohcool->source));
-                serial_print(" GSI: ");
-                serial_print(itoa(wow, ohcool->gsi));
-                serial_print("\n");
+                isos[ohcool->source].iso = ohcool;
                 break;
             case ACPI_MADT_ENTRY_TYPE_IOAPIC:
-                if (ioapic)
-                {
-                    serial_print("MULTIPLE IOAPICS, SHIT MY PANTS WE GIVE UP\n");
-                    write_color(ctx, "SHIT MY PANTS, TOO MANY IOAPICS FUCK THIS\n", 4);
-                    asm("cli"); // disable interrupts
-                    for (;;)
-                    {
-                        asm ("hlt");
-                    }
-                }
-                struct acpi_madt_ioapic *c = ent;
-                ioapic = c;
-                serial_print("THIS IOAPIC HANDLES GSI: ");
-                serial_print(itoa(wow, ioapic->gsi_base));
-                serial_print(" TO GSI: ");
-                serial_print(itoa(wow, get_ioapic_maxgsi()));
-                serial_print("\n");
+                struct acpi_madt_ioapic *blah = ent;
+                ioapics[ioapiccount].ioapic_info = blah;
+                ioapics[ioapiccount].max_gsi = get_ioapic_maxgsi(&ioapics[ioapiccount]);
+                ioapiccount++;
                 break;
             case ACPI_MADT_ENTRY_TYPE_LAPIC_NMI:
                 struct acpi_madt_lapic_nmi *e = ent;
@@ -122,11 +152,7 @@ void apic_init()
     asm("sti");
     asm("mov %0, %%cr8" :: "r"((uint64_t)0));
     lapic_addr = madt->local_interrupt_controller_address;
-    serial_print("LAPIC ADDR: ");
-    serial_print(itoah(wow, lapic_addr));
-    serial_print("\n");
     write_lapic_register(lapic_addr, 0xf0, 0x100 | 33);
-    serial_print("enabled lapic?\n");
     // enable lapic timer?
     // divide by 4
     write_lapic_register(lapic_addr, 0x3e0, 1);

@@ -3,6 +3,7 @@
 #include "drivers/serial.h"
 #include "vmm.h"
 #include "pmm.h"
+#include "bump.h"
 #include <uacpi/kernel_api.h>
 #include <drivers/apic.h>
 static bool isPower2(uint64_t num)
@@ -90,30 +91,49 @@ uacpi_status uacpi_kernel_pci_write(
 {
     return UACPI_STATUS_UNIMPLEMENTED;
 }
+struct io_range
+{
+	uacpi_io_addr base;
+	uacpi_size len;
+};
 uacpi_status uacpi_kernel_io_map(
     uacpi_io_addr base, uacpi_size len, uacpi_handle *out_handle
 )
 {
-    return UACPI_STATUS_UNIMPLEMENTED;
+    struct io_range *rng = kmalloc(sizeof(struct io_range));
+    rng->base = base;
+    rng->len = len;
+    *out_handle = (uacpi_handle)rng;
+    return UACPI_STATUS_OK;
 }
 void uacpi_kernel_io_unmap(uacpi_handle handle)
 {
-    // NOT IMPLMENTED
+    kfree((struct io_range*)handle, sizeof(struct io_range));
 }
 
 uacpi_status uacpi_kernel_io_read(
-    uacpi_handle, uacpi_size offset,
+    uacpi_handle hnd, uacpi_size offset,
     uacpi_u8 byte_width, uacpi_u64 *value
 )
 {
-    return UACPI_STATUS_UNIMPLEMENTED;
+    struct io_range *rng = (struct io_range*)hnd;
+    if (offset >= rng->len)
+    {
+        return UACPI_STATUS_INVALID_ARGUMENT;
+    }
+    return uacpi_kernel_raw_io_read(rng->base + offset, byte_width, value);
 }
 uacpi_status uacpi_kernel_io_write(
-    uacpi_handle, uacpi_size offset,
+    uacpi_handle hnd, uacpi_size offset,
     uacpi_u8 byte_width, uacpi_u64 value
 )
 {
-    return UACPI_STATUS_UNIMPLEMENTED;
+    struct io_range *rng = (struct io_range*)hnd;
+    if (offset >= rng->len)
+    {
+        return UACPI_STATUS_INVALID_ARGUMENT;
+    }
+    return uacpi_kernel_raw_io_write(rng->base + offset, byte_width, value);
 }
 void *uacpi_kernel_map(uacpi_phys_addr addr, uacpi_size len)
 {

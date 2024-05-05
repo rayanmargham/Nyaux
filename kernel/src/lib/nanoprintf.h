@@ -279,7 +279,8 @@ static int npf_bin_len(npf_uint_t i);
     #include <BaseTsd.h>
     typedef SSIZE_T ssize_t;
   #else
-    #include <sys/types.h>
+    #include <stddef.h>
+    #define ssize_t long
   #endif
 #endif
 
