@@ -10,6 +10,12 @@
 #include <pmm.h>
 #include <idt.h>
 #include <lib/kpanic.h>
+#include <uacpi/utilities.h>
+#include <uacpi/resources.h>
+ 
+#define PS2K_PNP_ID "PNP0303"
+int ps2_irq = 1;
+uint8_t ps2_port = 0;
 char us_qwerty_keyboard[] = 
 {
     0, 0, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 0, 0,
@@ -26,7 +32,7 @@ volatile struct KeyboardEvent events[32];
 volatile int event_count = 0;
 void ps2_handler(struct interrupt_frame *frame)
 {
-    uint8_t our_guy = inb(0x60);
+    uint8_t our_guy = inb(ps2_port);
     key_buf[key_buf_count++] = our_guy;
     if (key_buf[0] == 0xE0)
     {
@@ -148,10 +154,53 @@ void ps2_handler(struct interrupt_frame *frame)
     }
     send_lapic_eoi();
 }
+static uacpi_resource_iteration_decision ps2_res(void *user, uacpi_resource *resource)
+{
+    if (resource->type == UACPI_RESOURCE_TYPE_IRQ)
+    {
+        ps2_irq = resource->irq.irqs[0];
+    }
+    else if (resource->type == UACPI_RESOURCE_TYPE_FIXED_IO)
+    {
+        if (ps2_port == 0)
+        {
+            ps2_port = resource->fixed_io.address;
+        }
+    }
+    else if (resource->type == UACPI_RESOURCE_TYPE_IO)
+    {
+        if (ps2_port == 0)
+        {
+            ps2_port = resource->io.minimum;
+        }
+    }
+    return UACPI_RESOURCE_ITERATION_CONTINUE;
+}
+bool ps2_exists = false;
+static uacpi_ns_iteration_decision found_ps2(void *user, uacpi_namespace_node *node)
+{
+    ps2_exists = true;
+    uacpi_resources *kb_res;
+    kprintf("ps2driver: scanning for device\n");
+    uacpi_status ret = uacpi_get_current_resources(node, &kb_res);
+    if (uacpi_unlikely_error(ret)) {
+        kpanic("unable to retrieve Get PS2 resources", NULL);
+        return UACPI_NS_ITERATION_DECISION_NEXT_PEER;
+    }
+    uacpi_for_each_resource(kb_res, ps2_res, NULL);
+    uacpi_free_resources(kb_res);
+    return UACPI_NS_ITERATION_DECISION_CONTINUE;
+ 
+}
 void ps2_init()
 {
-    kprintf("%p\n", &event_count);
-    int choosenone = AllocateVector();
-    RegisterHandler(choosenone, ps2_handler);
-    route_irq(1, get_lapic_id(), choosenone);
+    uacpi_find_devices(PS2K_PNP_ID, found_ps2, NULL);
+    if (!ps2_exists)
+    {
+        kpanic("No PS2 Keyboard!\n", NULL);
+    }
+    kprintf("ps2driver: Devices Found!\n");
+    int vec = AllocateVector();
+    RegisterHandler(vec, ps2_handler);
+    route_irq(ps2_irq, get_lapic_id(), vec);
 }

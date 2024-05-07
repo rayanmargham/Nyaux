@@ -282,8 +282,11 @@ void *kmalloc(size_t size)
 void *krealloc(void *addr, size_t oldsz, size_t newsz)
 {
     void *new_shit = kmalloc(newsz);
-    memcpy(new_shit, addr, oldsz);
-    kfree(addr, oldsz);
+    if (addr && oldsz > 0)
+    {
+        memcpy(new_shit, addr, oldsz);
+        kfree(addr, oldsz);
+    }
     return new_shit;
 }
 void init_slabs()

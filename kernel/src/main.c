@@ -10,6 +10,7 @@
 #include "bump.h"
 #include "drivers/apic.h"
 #include "drivers/ps2.h"
+#include "fs/vfs.h"
 #define NANOPRINTF_USE_FIELD_WIDTH_FORMAT_SPECIFIERS 1
 #define NANOPRINTF_USE_PRECISION_FORMAT_SPECIFIERS 1
 #define NANOPRINTF_USE_FLOAT_FORMAT_SPECIFIERS 0
@@ -289,6 +290,7 @@ void kprintf(const char* format, ...)
     va_end(args);
 }
 
+
 // The following will be our kernel's entry point.
 // If renaming _start() to something else, make sure to change the
 // linker script accordingly.
@@ -346,6 +348,7 @@ void _start(void) {
     kprintf("PrintF Test: %s\n", "meow");
     apic_init();
     ps2_init();
+    test_vfs();
     sched_init();
     for (;;) {
         asm("hlt");

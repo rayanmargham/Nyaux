@@ -39,7 +39,7 @@ volatile void switch_task(struct StackFrame *frame)
             }
         }
         switch_context(frame, current_thread->context);
-        pml4 = current_thread->context->pagemap;
+        pml4 = current_thread->info->pagemap;
         update_cr3((uint64_t)pml4);
     }
     else
@@ -48,7 +48,7 @@ volatile void switch_task(struct StackFrame *frame)
         {
             current_thread = start_of_queue;
             switch_context(frame, current_thread->context);
-            pml4 = current_thread->context->pagemap;
+            pml4 = current_thread->info->pagemap;
             update_cr3((uint64_t)pml4);
             return;
         }
@@ -66,10 +66,10 @@ struct cpu_context_t *new_context(uint64_t entry_func, uint64_t rsp, uint64_t pa
         new_guy->frame.rip = entry_func;
         new_guy->frame.rsp = rsp;
         new_guy->frame.rbp = rsp;
+        new_guy->stack.base = rsp;
         new_guy->frame.rflags = 0x202;
         new_guy->frame.cs = 0x28; // KERNEL CODE
         new_guy->frame.ss = 0x30; // KERNEL DATA
-        new_guy->pagemap = pagemap;
         return new_guy;
 
     }
@@ -86,9 +86,19 @@ struct thread_t *create_thread(struct cpu_context_t *it)
     thread->next = NULL;
     return thread;
 }
+struct process_info *make_process_info(char *name, int pid)
+{
+    struct process_info *new_process = kmalloc(sizeof(struct process_info));
+    new_process->name = name;
+    new_process->pid = pid;
+    new_process->pagemap = pml4; // just set it to the kernels pagemap for now.
+    new_process->root_vfs = root->list;
+    new_process->cur_working_directory = root->list;
+
+    return new_process;
+}
 void kthread_start()
 {
-    kprintf("%p\n", &event_count);
     while (true)
     {
         if (event_count > 0)
@@ -116,15 +126,22 @@ void kthread_start()
         }
     }
 }
+struct process_info *get_cur_process_info()
+{
+    return current_thread->info;
+}
 void sched_init()
 {
     // uint64_t *new_poop = (uint64_t)(((uint64_t)pmm_alloc_singlep() + hhdm_request.response->offset) + 4096);
+    struct process_info *e = make_process_info("Keyboard clearer thing", 0);
     uint64_t *new_kstack = (uint64_t)(((uint64_t)pmm_alloc_singlep() + hhdm_request.response->offset) + 4096); // CAUSE STACK GROWS DOWNWARDS
     struct cpu_context_t *ctx = new_context((uint64_t)kthread_start, (uint64_t)new_kstack, (uint64_t)pml4, false);
     // struct cpu_context_t *timeforpoop = new_context((uint64_t)kthread_poop, (uint64_t)new_poop, pml4, false);
     // serial_print("Created New CPU Context for Kernel Thread\n");
     // serial_print("attempting to create kthread...\n");
     struct thread_t *kthread = create_thread(ctx);
+    kthread->info = e;
+    
     start_of_queue = kthread;
     // // lets create another thread trollage
     // struct thread_t *pooper = create_thread(timeforpoop);
