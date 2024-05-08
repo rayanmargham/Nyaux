@@ -1,6 +1,6 @@
 #include "tmpfs.h"
 
-int vnode_lookup(struct vnode *v, struct seg_info *seg, struct vnode **res)
+int vnode_lookup(struct vnode *v, char *part, struct vnode **res)
 {
     if (v->type == NYAVNODE_DIR)
     {
@@ -13,7 +13,7 @@ int vnode_lookup(struct vnode *v, struct seg_info *seg, struct vnode **res)
         }
         while (ok)
         {
-            if (strncmp(ok->name, seg->seg, seg->len) == 0)
+            if (strncmp(ok->name, part, strlen(part) - 1) == 0)
             {
                 *res = ok->ptr_to_vnode;
                 return 0;
@@ -46,6 +46,7 @@ int vnode_mkdir(struct vnode *v, const char *name, struct vnode **newdir)
         struct tmpfs_dir_entry *new_dir_entry = kmalloc(sizeof(struct tmpfs_dir_entry));
         memset(new_dir_entry, 0, sizeof(struct tmpfs_dir_entry));
         new_dir_entry->name = kmalloc(strlen(name));
+        memset(new_dir_entry->name, 0, strlen(name));
         memcpy(new_dir_entry->name, name, strlen(name));
         new_dir_entry->ptr_to_vnode = new;
         new_dir_entry->next = dir->head;

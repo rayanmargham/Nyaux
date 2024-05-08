@@ -52,8 +52,8 @@ void kpanic(char *msg, struct StackFrame *frame)
     else
     {
         ctx->set_text_fg_rgb(ctx, 0xFFFFFFFF);
-        write(ctx, "\e[41m\033[2J");
-        ctx->clear(ctx, true);
+        //write(ctx, "\e[41m\033[2J");
+        //ctx->clear(ctx, true);
         write(ctx, "Nya Kernel has Panicked with the Following Message: ");
         write(ctx, msg);
         write(ctx, "\n");

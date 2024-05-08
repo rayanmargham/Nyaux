@@ -11,6 +11,7 @@
 #include "drivers/apic.h"
 #include "drivers/ps2.h"
 #include "fs/vfs.h"
+#include "fs/tar.h"
 #define NANOPRINTF_USE_FIELD_WIDTH_FORMAT_SPECIFIERS 1
 #define NANOPRINTF_USE_PRECISION_FORMAT_SPECIFIERS 1
 #define NANOPRINTF_USE_FLOAT_FORMAT_SPECIFIERS 0
@@ -218,6 +219,15 @@ int strcmp(const char *s1, const char *s2)
 			return (0);
 	return (*(const unsigned char *)s1 - *(const unsigned char *)(s2 - 1));
 }
+char *strcpy(to, from)
+	register char *to;
+	register const char *from;
+{
+	char *save = to;
+
+	for (; *to = *from; ++from, ++to);
+	return(save);
+}
 void write_color(struct flanterm_context *ctx, char *buf, int type)
 {
     switch (type)
@@ -349,6 +359,7 @@ void _start(void) {
     apic_init();
     ps2_init();
     test_vfs();
+    parse_tar_and_populate_tmpfs(module_request.response->modules[1]);
     sched_init();
     for (;;) {
         asm("hlt");

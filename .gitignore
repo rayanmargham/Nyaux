@@ -4,3 +4,4 @@
 *.hdd
 kernel/src/ACPI/uACPI
 qemu_log.txt
+nyauxramfs.tar

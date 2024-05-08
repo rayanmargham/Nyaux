@@ -56,11 +56,13 @@ kernel:
 	$(MAKE) -C kernel
 
 $(IMAGE_NAME).iso: limine kernel
+	cd sys_root; tar --format=ustar -cf ../nyauxramfs.tar *; cd ../;
 	rm -rf iso_root
 	mkdir -p iso_root/boot
 	cp -v kernel/bin/kernel iso_root/boot/
 	cp -v b.meow iso_root/boot/
 	cp -v a.meow iso_root/boot/
+	cp -v nyauxramfs.tar iso_root/boot/
 	mkdir -p iso_root/boot/limine
 	cp -v limine.cfg limine/limine-bios.sys limine/limine-bios-cd.bin limine/limine-uefi-cd.bin iso_root/boot/limine/
 	mkdir -p iso_root/EFI/BOOT
@@ -89,6 +91,7 @@ $(IMAGE_NAME).hdd: limine kernel
 .PHONY: clean
 clean:
 	rm -rf iso_root $(IMAGE_NAME).iso $(IMAGE_NAME).hdd
+	rm nyauxramfs.tar
 	$(MAKE) -C kernel clean
 
 .PHONY: distclean

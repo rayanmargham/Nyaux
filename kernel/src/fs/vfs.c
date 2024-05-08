@@ -4,6 +4,7 @@
 #include <pmm.h>
 #include <vmm.h>
 #include "tmpfs.h"
+#include <stdbool.h>
 
 struct vfs *root;
 
@@ -21,74 +22,56 @@ char *strchr(const char *p, int ch)
 	}
 	/* NOTREACHED */
 }
-struct seg_info get_next_part(const char *path)
-{
-    char *ptr = path;
-    char *test = strchr(ptr, '/');
-    if (test != NULL)
-    {
-        if (test[1] != NULL)
-        {
-            test = test + 1;
-        }
-        char *next = strchr(test, '/');
-        if (next != NULL)
-        {
-            size_t length = next - test;
-            struct seg_info poop = {test, length};
-            return poop;
-            
-        }
-        else
-        {
-            size_t length = strlen(test);
-            struct seg_info poop = {test, length};
-            return poop;
-        }
-        
-    }
-    else
-    {
-        struct seg_info fake = {NULL, NULL};
-        return fake;
-    }
-}
-struct vnode *vnode_path_lookup(const char *path)
-{
-    struct vnode *cur_vnode = NULL;
-    char *ptr = path;
-    if (path[0] == '/')
-    {
-        cur_vnode = root->list;
-    }
-    else
-    {
-        // SHIT
-        return NULL; // NOT IMPLMENTED 
-        
-    }
-    if (path[strlen(path) - 1] == '/' || path[strlen(path) - 1] == '\\')
-    {
-        ptr[strlen(path) - 1] = '\0';
-    }
-    while (cur_vnode)
-    {
-        struct seg_info next_seg = get_next_part(ptr);
-        if (next_seg.seg == NULL)
-        {
-            break;
-        }
-        ptr = next_seg.seg; // e
-        struct vnode *res;
-        
-        cur_vnode->ops->v_lookup(cur_vnode, &next_seg, &res);
 
-        
+struct vnode *vnode_path_lookup(struct vnode *cur, const char *path, bool getparent, char *componentlast)
+{
+    struct vnode *cur_vnode = cur;
+    char *ptr = path;
+    size_t pathlen = strlen(path);
+    char *work_with_me = kmalloc(pathlen + 1);
+    memset(work_with_me, 0, pathlen + 1);
+    strcpy(work_with_me, path);
+    for (int i = 0; i < pathlen; ++i)
+    {
+        if (work_with_me[i] == '/')
+        {
+            work_with_me[i] = '\0';
+        }
+    }
+    for (int i = 0; i < pathlen; ++i)
+    {
+        if (work_with_me[i] == '\0')
+        {
+            continue;
+        }
+        struct vnode *res;
+        char *component = &work_with_me[i];
+        size_t len_of_comp = strlen(component);
+        bool islast = i + len_of_comp == pathlen;
+        if (!islast)
+        {
+            // stolen from astral os :trl: thanks mathew
+            // this just deals with cases of paths given like /shit/ or smthing idk
+            // i dont understand it but THROW IT IN ANYWAY!
+            // i hate dealing with path parsing :angry:
+            int j;
+            for (j = i + len_of_comp; i < pathlen && work_with_me[j] == '\0'; ++j)
+            islast = j == pathlen;
+        }
+        if (islast && getparent == true)
+        {
+            strcpy(componentlast, component);
+            return cur_vnode;
+        }
+        cur_vnode->ops->v_lookup(cur_vnode, component, &res);
+
+
         if (res)
         {
             if (res->type == NYAVNODE_DIR)
             {
                 cur_vnode = res; // keep going down the directory
+                i += len_of_comp;
             }
             else
             {
@@ -104,34 +87,44 @@ struct vnode *vnode_path_lookup(const char *path)
     return cur_vnode; // PROBS NULL BUT COULD ALSO BE A DIRECTORY.
 
 }
+
+int vfs_create(struct vnode *indir, char *path, int type, struct vnode **res)
+{
+    if (path[0] == '\0')
+    {
+        return -1;
+    }
+    char *component = kmalloc(strlen(path) + 1);
+    struct vnode *our_par = vnode_path_lookup(indir, path, true, component);
+    if (!our_par)
+    {
+        kfree(component, strlen(path) + 1);
+        return -1;
+    }
+    struct vnode *created = NULL;
+    if (type == 0)
+    {
+        // CREATE DIRECTORY
+        our_par->ops->v_mkdir(our_par, component, &created);
+        kfree(component, strlen(path) + 1);
+        *res = created;
+        return 0;
+    }
+    else if (type == 1)
+    {
+        our_par->ops->v_create(our_par, component, &created);
+        kfree(component, strlen(path + 1));
+        *res = created;
+        return 0;
+    }
+    else
+    {
+        // not supported
+        return -1;
+    }
+
+}
 void test_vfs()
 {
-    struct vfs ro = {};
-    root = &ro;
-    struct tmpfs_dir actual_root = {.head = NULL};
-    struct vnode root_vnode = {
-        .ops = &tmpfsops,
-        .type = NYAVNODE_DIR,
-        .data = &actual_root
-    };
-    root->list = &root_vnode;
-    struct vnode *homedir = NULL;
-    root_vnode.ops->v_mkdir(&root_vnode, "home", &homedir);
-    struct vnode *test = vnode_path_lookup("/home");
-    if (test)
-    {
-        kprintf("FOUND directory /home!\n");
-    }
-    struct vnode *meowtxt = NULL;
-    test->ops->v_create(test, "meow.txt", &meowtxt);
-    struct vnode *findmeow = vnode_path_lookup("/home/meow.txt");
-    if (findmeow)
-    {
-        kprintf("Found File /home/meow.txt!\n");
-    }
-    char m[] = "YES I AM A NERD";
-    findmeow->ops->v_rdwr(findmeow, sizeof(m), 0, m, 1);
-    char buff[sizeof(m)];
-    findmeow->ops->v_rdwr(findmeow, sizeof(buff), 0, buff, 0);
-    kprintf("Contents of meow.txt: %s\n", buff);
+    
 }
