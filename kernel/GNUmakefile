@@ -3,7 +3,7 @@ override MAKEFLAGS += -rR
 
 # This is the name that our final kernel executable will have.
 # Change as needed.
-override KERNEL := kernel
+override KERNEL := nyaux
 
 # Convenience macro to reliably declare user overridable variables.
 define DEFAULT_VAR =
@@ -18,11 +18,11 @@ endef
 # It is suggested to use a custom built cross toolchain to build a kernel.
 # We are using the standard "cc" here, it may work by using
 # the host system's toolchain, but this is not guaranteed.
-override DEFAULT_CC := $(HOME)/opt/cross/bin/x86_64-elf-gcc
+
 $(eval $(call DEFAULT_VAR,CC,$(DEFAULT_CC)))
 
 # Same thing for "ld" (the linker).
-override DEFAULT_LD := $(HOME)/opt/cross/x86_64-elf/bin/ld
+
 $(eval $(call DEFAULT_VAR,LD,$(DEFAULT_LD)))
 
 # User controllable C flags.
@@ -130,3 +130,7 @@ clean:
 .PHONY: distclean
 distclean: clean
 	rm -f src/limine.h
+.PHONY: install
+install:
+	install -d "$(DESTDIR)$(PREFIX)/share/$(KERNEL)"
+	install -m 644 bin/$(KERNEL) "$(DESTDIR)$(PREFIX)/share/$(KERNEL)/"

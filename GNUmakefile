@@ -1,100 +1,87 @@
-# Nuke built-in rules and variables.
-override MAKEFLAGS += -rR
+# GNUmakefile: Main makefile of the project.
+# Code is governed by the GPL-2.0 license.
+# Copyright (C) 2021-2022 The Vinix authors.
 
-override IMAGE_NAME := template
-
-# Convenience macro to reliably declare user overridable variables.
-define DEFAULT_VAR =
-    ifeq ($(origin $1),default)
-        override $(1) := $(2)
-    endif
-    ifeq ($(origin $1),undefined)
-        override $(1) := $(2)
-    endif
-endef
-
-# Toolchain for building the 'limine' executable for the host.
-override DEFAULT_HOST_CC := cc
-$(eval $(call DEFAULT_VAR,HOST_CC,$(DEFAULT_HOST_CC)))
-override DEFAULT_HOST_CFLAGS := -g -O2 -pipe
-$(eval $(call DEFAULT_VAR,HOST_CFLAGS,$(DEFAULT_HOST_CFLAGS)))
-override DEFAULT_HOST_CPPFLAGS :=
-$(eval $(call DEFAULT_VAR,HOST_CPPFLAGS,$(DEFAULT_HOST_CPPFLAGS)))
-override DEFAULT_HOST_LDFLAGS :=
-$(eval $(call DEFAULT_VAR,HOST_LDFLAGS,$(DEFAULT_HOST_LDFLAGS)))
-override DEFAULT_HOST_LIBS :=
-$(eval $(call DEFAULT_VAR,HOST_LIBS,$(DEFAULT_HOST_LIBS)))
+QEMUFLAGS ?= -M q35,smm=off -m 1G -cdrom nyaux.iso -serial stdio -smp 4
 
 .PHONY: all
-all: $(IMAGE_NAME).iso
+all:
+	rm -f nyaux.iso
+	$(MAKE) nyaux.iso
 
-.PHONY: all-hdd
-all-hdd: $(IMAGE_NAME).hdd
+nyaux.iso: jinx
+	rm -f builds/kernel.built builds/kernel.packaged
+	$(MAKE) distro-base
+	./build-support/makeiso.sh
 
-.PHONY: run
-run: $(IMAGE_NAME).iso
-	@sudo qemu-system-x86_64 $(IMAGE_NAME).iso -M q35 -bios /usr/share/edk2-ovmf/x64/OVMF_CODE.fd -m 1G -accel tcg -serial stdio -cpu max
-.PHONY: run_debug
-run_debug: $(IMAGE_NAME).iso
-	@sudo qemu-system-x86_64 $(IMAGE_NAME).iso -M q35 -bios /usr/share/edk2-ovmf/x64/OVMF_CODE.fd -m 1G -d int -S -s -D qemu.txt -cpu max
+.PHONY: debug
+debug:
+	JINX_CONFIG_FILE=jinx-config $(MAKE) all
+
+jinx:
+	curl -Lo jinx https://github.com/mintsuki/jinx/raw/802082d0389d0b73afed5f52875a204e9134a3fe/jinx
+	chmod +x jinx
+
+.PHONY: distro-full
+distro-full: jinx
+	./jinx build-all
+
+.PHONY: distro-base
+distro-base: jinx
+	./jinx build base-files kernel
+
+.PHONY: run-kvm
+run-kvm: nyaux.iso
+	qemu-system-x86_64 -enable-kvm -cpu host $(QEMUFLAGS)
+
+.PHONY: run-hvf
+run-hvf: nyaux.iso
+	qemu-system-x86_64 -accel hvf -cpu host $(QEMUFLAGS)
 
 ovmf:
 	mkdir -p ovmf
-	cd ovmf && curl -Lo OVMF.fd https://retrage.github.io/edk2-nightly/bin/RELEASEX64_OVMF.fd
+	cd ovmf && curl -o OVMF.fd https://retrage.github.io/edk2-nightly/bin/RELEASEX64_OVMF.fd
 
-limine:
-	git clone https://github.com/limine-bootloader/limine.git --branch=v7.x-binary --depth=1
-	$(MAKE) -C limine \
-		CC="$(HOST_CC)" \
-		CFLAGS="$(HOST_CFLAGS)" \
-		CPPFLAGS="$(HOST_CPPFLAGS)" \
-		LDFLAGS="$(HOST_LDFLAGS)" \
-		LIBS="$(HOST_LIBS)"
+.PHONY: run-uefi
+run-uefi: nyaux.iso ovmf
+	qemu-system-x86_64 -enable-kvm -cpu host $(QEMUFLAGS) -bios ovmf/OVMF.fd
 
-.PHONY: kernel
-kernel:
-	$(MAKE) -C kernel
+.PHONY: run-bochs
+run-bochs: nyaux.iso
+	bochs -f bochsrc
 
-$(IMAGE_NAME).iso: limine kernel
-	cd sys_root; tar --format=ustar -cf ../nyauxramfs.tar *; cd ../;
-	rm -rf iso_root
-	mkdir -p iso_root/boot
-	cp -v kernel/bin/kernel iso_root/boot/
-	cp -v b.meow iso_root/boot/
-	cp -v a.meow iso_root/boot/
-	cp -v nyauxramfs.tar iso_root/boot/
-	mkdir -p iso_root/boot/limine
-	cp -v limine.cfg limine/limine-bios.sys limine/limine-bios-cd.bin limine/limine-uefi-cd.bin iso_root/boot/limine/
-	mkdir -p iso_root/EFI/BOOT
-	cp -v limine/BOOTX64.EFI iso_root/EFI/BOOT/
-	cp -v limine/BOOTIA32.EFI iso_root/EFI/BOOT/
-	xorriso -as mkisofs -b boot/limine/limine-bios-cd.bin \
-		-no-emul-boot -boot-load-size 4 -boot-info-table \
-		--efi-boot boot/limine/limine-uefi-cd.bin \
-		-efi-boot-part --efi-boot-image --protective-msdos-label \
-		iso_root -o $(IMAGE_NAME).iso
-	./limine/limine bios-install $(IMAGE_NAME).iso
-	rm -rf iso_root
+.PHONY: run-lingemu
+run-lingemu: nyaux.iso
+	lingemu runvirt -m 8192 --diskcontroller type=ahci,name=ahcibus1 --disk nyaux.iso,disktype=cdrom,controller=ahcibus1
 
-$(IMAGE_NAME).hdd: limine kernel
-	rm -f $(IMAGE_NAME).hdd
-	dd if=/dev/zero bs=1M count=0 seek=64 of=$(IMAGE_NAME).hdd
-	sgdisk $(IMAGE_NAME).hdd -n 1:2048 -t 1:ef00
-	./limine/limine bios-install $(IMAGE_NAME).hdd
-	mformat -i $(IMAGE_NAME).hdd@@1M
-	mmd -i $(IMAGE_NAME).hdd@@1M ::/EFI ::/EFI/BOOT ::/boot ::/boot/limine
-	mcopy -i $(IMAGE_NAME).hdd@@1M kernel/bin/kernel ::/boot
-	mcopy -i $(IMAGE_NAME).hdd@@1M limine.cfg limine/limine-bios.sys ::/boot/limine
-	mcopy -i $(IMAGE_NAME).hdd@@1M limine/BOOTX64.EFI ::/EFI/BOOT
-	mcopy -i $(IMAGE_NAME).hdd@@1M limine/BOOTIA32.EFI ::/EFI/BOOT
+.PHONY: run
+run: nyaux.iso
+	qemu-system-x86_64 $(QEMUFLAGS)
+
+.PHONY: kernel-clean
+kernel-clean:
+	make -C kernel clean
+	rm -rf builds/kernel* pkgs/kernel*
+
+
+
+.PHONY: init-clean
+init-clean:
+	rm -rf init/init
+	rm -rf builds/init* pkgs/init*
+
+.PHONY: base-files-clean
+base-files-clean:
+	rm -rf builds/base-files* pkgs/base-files*
 
 .PHONY: clean
-clean:
-	rm -rf iso_root $(IMAGE_NAME).iso $(IMAGE_NAME).hdd
-	rm nyauxramfs.tar
-	$(MAKE) -C kernel clean
+clean: kernel-clean init-clean base-files-clean
+	rm -rf iso_root sysroot nyaux.iso initramfs.tar
 
 .PHONY: distclean
-distclean: clean
-	rm -rf limine ovmf
-	$(MAKE) -C kernel distclean
+distclean: jinx
+	make -C kernel distclean
+	./jinx clean
+	rm -rf iso_root sysroot nyaux.iso initramfs.tar jinx ovmf
+	chmod -R 777 .jinx-cache
+	rm -rf .jinx-cache

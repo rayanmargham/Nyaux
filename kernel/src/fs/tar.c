@@ -56,6 +56,10 @@ void parse_tar_and_populate_tmpfs(struct limine_file *archive)
             }
             hdr_ptr = (void*)hdr_ptr + 512 + align_up(getsize(hdr_ptr->filesize_octal), 512);
         }
+        else 
+        {
+            hdr_ptr = (void*)hdr_ptr + 512 + align_up(getsize(hdr_ptr->filesize_octal), 512); // FUCK OFF!
+        }
     }
     kprintf("ramfs: initramfs created!\n");
 }

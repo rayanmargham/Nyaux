@@ -1,0 +1,23 @@
+name=kernel
+version=0.0
+revision=1
+source_dir="kernel"
+source_imagedeps="git"
+source_allow_network="yes"
+hostdeps="gcc"
+deps="core-libs"
+imagedeps="nasm"
+allow_network="yes"
+
+
+build() {
+    cp -rpf "${source_dir}"/. ./
+
+    unset CFLAGS; unset LDFLAGS; make CC=x86_64-pc-nyaux-mlibc-gcc LD=x86_64-pc-nyaux-mlibc-ld -j${parallelism} KTOOLCHAIN=${OS_TRIPLET}-
+}
+
+package() {
+    make install PREFIX="${prefix}" DESTDIR="${dest_dir}"
+
+    post_package_strip
+}
