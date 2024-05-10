@@ -12,6 +12,7 @@ void RegisterSyscall(int syscall, void (*func)(struct syscall_frame *frame, stru
 
 void syscall_log_mlibc(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr)
 {
+    kprintf("addr of msg: %p\n", frame->rdi);
     char *msg = frame->rdi;
     kprintf("mlibc says: %s\n", msg);
     kprintf("Kernel Stack for this Thread %p\n", ptr->kernel_stack_ptr);

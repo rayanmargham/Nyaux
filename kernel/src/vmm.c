@@ -43,7 +43,10 @@ uint64_t align_up(uint64_t addr, size_t page_size)
     return (addr + (page_size - 1)) & ~(page_size - 1);
 }
 
-
+uint64_t get_phys_from_entry(uint64_t pte)
+{
+    return pte & 0x0007FFFFFFFFF000; // get bits 12-51 from the page table entry, to get the physical address
+}
 uint64_t *get_next_table(uint64_t *table, uint64_t index, uint8_t flags)
 {
     if ((table[index] & NYA_OS_VMM_PRESENT) == 0)
@@ -79,6 +82,7 @@ void map(uint64_t *pml4, uint64_t virt, uint64_t phys, uint8_t flags)
     entry = entry | flags;
     ((uint64_t*)((uint64_t)cur_table + hhdm_request.response->offset))[lvl1_index] = entry;
 }
+
 uint64_t *get_next_table_unmap(uint64_t *table, uint64_t index)
 {
     if (table != NULL)
@@ -97,6 +101,37 @@ uint64_t *get_next_table_unmap(uint64_t *table, uint64_t index)
     {
         return NULL;
     }
+}
+uint64_t virt_to_phys(uint64_t *pml4, uint64_t virt)
+{
+    uint64_t old = 0;
+    uint64_t lvl4_index = (virt >> 39) & 0x1FF;
+    uint64_t lvl3_index = (virt >> 30) & 0x1FF;
+    uint64_t lvl2_index = (virt >> 21) & 0x1FF;
+    uint64_t lvl1_index = (virt >> 12) & 0x1FF;
+
+    uint64_t *cur_table = pml4;
+    cur_table = get_next_table_unmap(pml4, lvl4_index);
+    if (cur_table == NULL)
+    {
+        return 0;
+    }
+    cur_table = get_next_table_unmap((uint64_t)cur_table + hhdm_request.response->offset, lvl3_index);
+    if (cur_table == NULL)
+    {
+        return 0;
+    }
+    cur_table = get_next_table_unmap((uint64_t)cur_table + hhdm_request.response->offset, lvl2_index);
+
+    if (cur_table != NULL)
+    {
+        if (((uint64_t*)((uint64_t)cur_table + hhdm_request.response->offset))[lvl1_index] != NULL)
+        {
+            old = ((uint64_t*)((uint64_t)cur_table + hhdm_request.response->offset))[lvl1_index];
+        }
+    }
+    return get_phys_from_entry(old);
+
 }
 uint64_t unmap(uint64_t *pml4, uint64_t virt)
 {
@@ -131,7 +166,96 @@ uint64_t unmap(uint64_t *pml4, uint64_t virt)
     return old;
 
 }
+void *vmm_region_alloc_user(struct pagemap *user_map, uint64_t size, uint8_t flags)
+{
+    struct vmm_region *cur_node = user_map->head;
+    struct vmm_region *prev_node = NULL;
+    while (cur_node != NULL)
+    {
+        // ASSUME REGIONS IN ORDER CAUSE WE COOL :sunglasses:
+        if (prev_node == NULL)
+        {
+            prev_node = cur_node;
+            cur_node = cur_node->next;
+            continue;
+        }
+        if ((cur_node->base - (prev_node->base + prev_node->length)) >= align_up(size, 4096) + 0x1000)
+        {
+            struct vmm_region *new_guy = kmalloc(sizeof(struct vmm_region));
+            new_guy->base = (prev_node->base + prev_node->length);
+            
+            new_guy->length = align_up(size, 4096);
+            kprintf("vmm: Allocating Region %p length: %p\n", new_guy->base, new_guy->length);
+            prev_node->next = new_guy;
+            new_guy->next = cur_node;
+            cur_node = cur_node->next;
+            int num_of_pages = align_up(size, 4096) / 4096; // num of pages to alloc :sunglasses:
+            for (int i = 0; i < num_of_pages; i++)
+            {
+                void *page = pmm_alloc_singlep();
+                // memzero that shit!
+                memset(page + hhdm_request.response->offset, 0, 4096);
+                kprintf("Mapping Virtual Address %p\n", new_guy->base + (i * 0x1000));
+                map((uint64_t)user_map->pml4 + hhdm_request.response->offset, new_guy->base + (i * 0x1000), page, flags);
+            }
+            
+            return new_guy->base;
 
+        }
+        else
+        {
+            // not enough space for our new region sadly, continue
+            prev_node = cur_node;
+            cur_node = cur_node->next;
+            continue;
+        }
+    }
+    // STILL HERE?
+    // PANIC CAUSE NO REGIONS CAN FIT VMM REGION WOWIE!
+    serial_print("NO FREE REGIONS\n");
+    asm ("cli");
+    for (;;)
+    {
+        asm ("hlt");
+    }
+}
+void vmm_region_dealloc_user(struct pagemap *user_map, uint64_t base)
+{
+    
+    struct vmm_region *cur_node = user_map->head; // find prev node and node after it
+    struct vmm_region *prev_prev_node = NULL;
+    while(cur_node != NULL)
+    {
+        if (cur_node->base == base)
+        {
+            if (cur_node->next)
+            {
+                prev_prev_node->next = cur_node->next;
+            }
+            int num_of_pages = cur_node->length / 4096; // assumed to be page aligned
+            for (int i = 0; i < num_of_pages; i++)
+            {
+                uint64_t phys = unmap((uint64_t)user_map->pml4 + hhdm_request.response->offset, cur_node->base + (i * 0x1000));
+                pmm_free_singlep((uint64_t)get_phys_from_entry(phys) + hhdm_request.response->offset);
+            }
+            free(cur_node);
+            return;
+        }
+        else
+        {
+            prev_prev_node = cur_node;
+            cur_node = cur_node->next;
+            continue;
+        }
+    }
+    // REGION DOESNT EXIST WOWIE!
+    write_color(ctx, "Region Provided doesn't exist!\n", 4);
+    asm ("cli");
+    for (;;)
+    {
+        asm ("hlt");
+    }
+}
 void *vmm_region_alloc(uint64_t size, uint8_t flags)
 {
     struct vmm_region *cur_node = kernel_pagemap.head;
@@ -181,10 +305,6 @@ void *vmm_region_alloc(uint64_t size, uint8_t flags)
     {
         asm ("hlt");
     }
-}
-uint64_t get_phys_from_entry(uint64_t pte)
-{
-    return pte & 0x0007FFFFFFFFF000; // get bits 12-51 from the page table entry, to get the physical address
 }
 void vmm_region_dealloc(uint64_t base)
 {
@@ -237,6 +357,7 @@ void vmm_region_walk()
         cur_node = cur_node->next;
     }
 }
+uint64_t kerneL_higher_half_size;
 void vmm_region_setup(uint64_t hhdm_pages)
 {
     size_t kernel_size_in_bytes = (size_t)THE_REAL;
@@ -250,6 +371,7 @@ void vmm_region_setup(uint64_t hhdm_pages)
     struct vmm_region *kernel_region = kmalloc(sizeof(struct vmm_region));
     kernel_region->base = addr_request.response->virtual_base;
     kernel_region->length = THE_REAL;
+    kerneL_higher_half_size = addr_request.response->virtual_base + THE_REAL;
 
     node->next = kernel_region;
 
@@ -261,6 +383,23 @@ void vmm_region_setup(uint64_t hhdm_pages)
     //       next
     serial_print_color("VMM Regions Init!\n", 1);
     vmm_region_walk();
+}
+struct pagemap *new_pagemap()
+{
+    struct pagemap *new_guy = kmalloc(sizeof(struct pagemap));
+    new_guy->pml4 = pmm_alloc_singlep();
+    memcpy((uint64_t*)((uint64_t)new_guy->pml4 + hhdm_request.response->offset) + 256, (uint64_t*)((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset) + 256, 0x1000 / 2);
+    struct vmm_region *part = kmalloc(sizeof(struct vmm_region));
+    part->base = 0x0;
+    part->length = 0x0;
+    part->flags = NYA_OS_VMM_PRESENT | NYA_OS_VMM_USER | NYA_OS_VMM_RW;
+    struct vmm_region *kernel = kmalloc(sizeof(struct vmm_region));
+    kernel->base = hhdm_request.response->offset;
+    kernel->length = kerneL_higher_half_size;
+    part->next = kernel;
+    new_guy->head = part;
+
+    return new_guy;
 }
 void vmm_init()
 {

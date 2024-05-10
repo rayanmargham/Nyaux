@@ -29,3 +29,7 @@ struct pagemap // represents a pagemap.
 };
 void update_cr4(uint64_t cr4_value);
 extern struct pagemap kernel_pagemap;
+struct pagemap *new_pagemap();
+void vmm_region_dealloc_user(struct pagemap *user_map, uint64_t base);
+void *vmm_region_alloc_user(struct pagemap *user_map, uint64_t size, uint8_t flags);
+uint64_t virt_to_phys(uint64_t *pml4, uint64_t virt);
