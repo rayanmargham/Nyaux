@@ -19,9 +19,19 @@ void update_cr3(uint64_t cr3_value)
 }
 uint64_t *read_cr3()
 {
-    uint64_t cr3;
-    __asm__ volatile ("mov %%cr3, %0" : "=r"(cr3) :: "memory");
-    return cr3;
+    uint64_t cr4;
+    __asm__ volatile ("mov %%cr4, %0" : "=r"(cr4) :: "memory");
+    return cr4;
+}
+void update_cr4(uint64_t cr4_value)
+{
+    __asm__ volatile("mov %0, %%cr4" :: "r"((uint64_t)cr4_value) : "memory");
+}
+uint64_t *read_cr4()
+{
+    uint64_t cr4;
+    __asm__ volatile ("mov %%cr4, %0" : "=r"(cr4) :: "memory");
+    return cr4;
 }
 uint64_t align_down(uint64_t addr, size_t page_size)
 {

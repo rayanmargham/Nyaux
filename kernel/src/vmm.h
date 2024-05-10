@@ -21,3 +21,5 @@ void update_cr3(uint64_t cr3_value);
 #define NYA_OS_VMM_USER (1 << 2)
 void map(uint64_t *pml4, uint64_t virt, uint64_t phys, uint8_t flags);
 uint64_t *read_cr3();
+uint64_t *read_cr4();
+void update_cr4(uint64_t cr4_value);

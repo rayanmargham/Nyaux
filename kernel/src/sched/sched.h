@@ -15,6 +15,7 @@ struct per_thread_cpu_info_t
 {
     uint64_t kernel_stack_ptr; // SINCE SYSCALL DOESNT STORE THE KERNEL STACK, WE MUST USE THIS TO LOAD OUR KERNEL STACK 
     uint64_t user_stack_ptr;
+    struct per_thread_cpu_info_t *ptr;
     // WE GET THIS STRUCT BY DOING SWAPGS
     // THAT PUTS IT IN THE KERNELGSBASE MSR FOR US TO READ FROM, WE CAN THEN USE THAT TO FUCKIN LOAD THE KERNEL STACK INTO RSP
 };

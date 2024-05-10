@@ -1,6 +1,7 @@
 global syscall_handler
 extern syscall_handlers
 syscall_handler:
+    swapgs
     mov [gs:8], rsp ; save user stack
     mov rsp, [gs:0] ; load kernel stack
     push rbp
@@ -19,6 +20,7 @@ syscall_handler:
     push r14
     push r15
     mov rdi, rsp
+    mov rsi, [gs:16]
     mov rax, [syscall_handlers + rax * 8]
     call rax
     pop r15
@@ -37,4 +39,5 @@ syscall_handler:
     pop rax
     pop rbp
     mov rsp, [gs:8]
+    swapgs
     o64 sysret

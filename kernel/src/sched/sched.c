@@ -29,7 +29,7 @@ volatile void switch_task(struct StackFrame *frame)
             {
                 
                 uint64_t kernel_gs_base = 0;
-                readmsr(0xC0000102, &kernel_gs_base);
+                readmsr(0xC0000101, &kernel_gs_base);
                 current_thread->gs_base = kernel_gs_base;
                 uint64_t fs = 0;
                 readmsr(0xC0000100, &fs);;
@@ -46,7 +46,7 @@ volatile void switch_task(struct StackFrame *frame)
                 if (current_thread->context->frame.cs == 0x40 | (3))
                 {
                     uint64_t kernel_gs_base = 0;
-                    readmsr(0xC0000102, &kernel_gs_base);
+                    readmsr(0xC0000101, &kernel_gs_base);
                     current_thread->gs_base = kernel_gs_base;
                     uint64_t fs = 0;
                     readmsr(0xC0000100, &fs);;
@@ -65,7 +65,7 @@ volatile void switch_task(struct StackFrame *frame)
         switch_context(frame, current_thread->context);
         if (current_thread->context->frame.cs == 0x40 | (3))
         {
-            writemsr(0xC0000102, (uint64_t)current_thread->gs_base);
+            writemsr(0xC0000101, (uint64_t)current_thread->gs_base);
             writemsr(0xC0000100, current_thread->fs);
         }
         pml4 = current_thread->info->pagemap;
@@ -80,7 +80,7 @@ volatile void switch_task(struct StackFrame *frame)
             switch_context(frame, current_thread->context);
             if (current_thread->context->frame.cs == 0x40 | (3))
             {
-                writemsr(0xC0000102, (uint64_t)current_thread->gs_base);
+                writemsr(0xC0000101, (uint64_t)current_thread->gs_base);
                 writemsr(0xC0000100, current_thread->fs);
             }
             pml4 = current_thread->info->pagemap;
@@ -196,8 +196,10 @@ void sched_init()
     new_thread->gs_base = kmalloc(sizeof(struct per_thread_cpu_info_t));
     new_thread->gs_base->kernel_stack_ptr = (uint64_t)(((uint64_t)pmm_alloc_singlep() + hhdm_request.response->offset) + 4096);
     new_thread->gs_base->user_stack_ptr = 0x1000 + 4096;
+    new_thread->gs_base->ptr = new_thread->gs_base;
     kthread->gs_base = kmalloc(sizeof(struct per_thread_cpu_info_t));
     kthread->gs_base->kernel_stack_ptr = (uint64_t)new_kstack;
+    kthread->gs_base->ptr = kthread->gs_base;
     new_thread->info = c;
     kthread->next = new_thread;
     // // lets create another thread trollage

@@ -56,7 +56,7 @@ run-lingemu: nyaux.iso
 
 .PHONY: run
 run: nyaux.iso
-	qemu-system-x86_64 $(QEMUFLAGS)
+	qemu-system-x86_64 $(QEMUFLAGS) -cpu max
 .PHONY: run-debug
 run-debug: nyaux.iso
 	qemu-system-x86_64 $(QEMUFLAGS) -s -S -cpu max
