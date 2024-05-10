@@ -356,8 +356,8 @@ void _start(void) {
     writemsr(0xC0000080, syscall);
     uint64_t star = 0;
     readmsr(0xC0000081, &star);
-    star |= (((uint64_t)0x30 << 48) | 3);
-    star |= (((uint64_t)0x28 << 32) | 3);
+    star |= ((uint64_t)0x28 << 32); // kernel cs, not segment selector but offset in gdt
+    star |= ((uint64_t)0x30 << 48); // user cs, same thing
     writemsr(0xC0000081, star);
     writemsr(0xC0000082, syscall_handler);
     writemsr(0xC0000084, (1 << 9));

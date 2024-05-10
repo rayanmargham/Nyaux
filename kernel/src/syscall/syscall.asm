@@ -37,4 +37,4 @@ syscall_handler:
     pop rax
     pop rbp
     mov rsp, [gs:8]
-    sysret
+    o64 sysret
