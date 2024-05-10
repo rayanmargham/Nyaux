@@ -14,4 +14,6 @@ gdt_flush:
     mov fs, ax
     mov gs, ax
     mov ss, ax
+    mov ax, 0x48
+    ltr ax
     ret

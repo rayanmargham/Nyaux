@@ -18,4 +18,6 @@ extern uint64_t *pml4;
 void update_cr3(uint64_t cr3_value);
 #define NYA_OS_VMM_PRESENT 1
 #define NYA_OS_VMM_RW (1 << 1)
+#define NYA_OS_VMM_USER (1 << 2)
+void map(uint64_t *pml4, uint64_t virt, uint64_t phys, uint8_t flags);
 uint64_t *read_cr3();

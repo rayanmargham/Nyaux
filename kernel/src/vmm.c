@@ -6,6 +6,7 @@
 extern char THE_REAL[];
 #define NYA_OS_VMM_PRESENT 1
 #define NYA_OS_VMM_RW (1 << 1)
+#define NYA_OS_VMM_USER (1 << 2)
 struct vmm_region *vmm_head;
 struct limine_kernel_address_request addr_request = 
 {

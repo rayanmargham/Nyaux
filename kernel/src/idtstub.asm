@@ -7,6 +7,10 @@ extern idt_handlers
 %macro isr_stub_error 1
     global isr_stub_%1
     isr_stub_%1:
+        cmp qword [rsp + 16], 0x43 ; get cs selector and check if we came from usermode
+        jne fuck_you_%1
+        swapgs
+        fuck_you_%1:
         push rbp
         push rax
         push rbx
@@ -45,12 +49,20 @@ extern idt_handlers
         pop rax
         pop rbp
         add rsp, 8 ; skip error code
+        cmp qword [rsp + 8], 0x43
+        jne shit_%1
+        swapgs
+        shit_%1:
         iretq
 %endmacro
 %macro isr_stub 1
     global isr_stub_%1
     isr_stub_%1:
         push 0 ; fake error code lmao
+        cmp qword [rsp + 16], 0x43 ; get cs selector and check if we came from usermode
+        jne escape_%1
+        swapgs
+        escape_%1:
         push rbp
         push rax
         push rbx
@@ -89,6 +101,10 @@ extern idt_handlers
         pop rax
         pop rbp
         add rsp, 8 ; skip fake error code
+        cmp qword [rsp + 8], 0x43
+        jne die_%1
+        swapgs
+        die_%1:
         iretq
 %endmacro
 
@@ -128,6 +144,10 @@ isr_stub 31
 global isr_stub_32
 isr_stub_32:
     push 0 ; fake error code lmao
+    cmp qword [rsp + 16], 0x43 ; get cs selector and check if we came from usermode
+    jne escape_32
+    swapgs
+    escape_32:
     push rbp
     push rax
     push rbx
@@ -166,6 +186,10 @@ isr_stub_32:
     pop rax
     pop rbp
     add rsp, 8 ; skip fake error code 
+    cmp qword [rsp + 8], 0x43
+    jne die_32
+    swapgs
+    die_32:
     iretq
 %assign cur_int 33
 %rep 223

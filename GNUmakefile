@@ -44,7 +44,7 @@ ovmf:
 
 .PHONY: run-uefi
 run-uefi: nyaux.iso ovmf
-	qemu-system-x86_64 -enable-kvm -cpu host $(QEMUFLAGS) -bios ovmf/OVMF.fd
+	qemu-system-x86_64 $(QEMUFLAGS) -cpu max -bios ovmf/OVMF.fd -d int
 
 .PHONY: run-bochs
 run-bochs: nyaux.iso
@@ -57,6 +57,9 @@ run-lingemu: nyaux.iso
 .PHONY: run
 run: nyaux.iso
 	qemu-system-x86_64 $(QEMUFLAGS)
+.PHONY: run-debug
+run-debug: nyaux.iso
+	qemu-system-x86_64 $(QEMUFLAGS) -s -S -cpu max
 
 .PHONY: kernel-clean
 kernel-clean:

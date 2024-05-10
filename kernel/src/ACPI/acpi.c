@@ -5,13 +5,18 @@
 #include "pmm.h"
 #include "limine.h"
 #include <uacpi/uacpi.h>
-void writemsr(uint32_t msr, uint32_t *lo, uint32_t *hi)
+void readmsr(uint32_t msr, uint64_t *val)
 {
-   asm volatile("rdmsr" : "=a"(*lo), "=d"(*hi) : "c"(msr));
+   uint32_t lo = 0;
+   uint32_t hi = 0;
+   asm volatile("rdmsr" : "=a"(lo), "=d"(hi) : "c"(msr));
+   *val = (uint64_t)lo | ((uint64_t)hi << 32);
 }
  
-void readmsr(uint32_t msr, uint32_t lo, uint32_t hi)
+void writemsr(uint32_t msr, uint64_t val)
 {
+   uint32_t lo = (val) & 0xFFFFFFFF;
+   uint32_t hi = (val >> 32) & 0xFFFFFFFF;
    asm volatile("wrmsr" : : "a"(lo), "d"(hi), "c"(msr));
 }
 

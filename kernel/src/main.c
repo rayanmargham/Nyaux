@@ -12,6 +12,7 @@
 #include "drivers/ps2.h"
 #include "fs/vfs.h"
 #include "fs/tar.h"
+#include <syscall/syscall.h>
 #define NANOPRINTF_USE_FIELD_WIDTH_FORMAT_SPECIFIERS 1
 #define NANOPRINTF_USE_PRECISION_FORMAT_SPECIFIERS 1
 #define NANOPRINTF_USE_FLOAT_FORMAT_SPECIFIERS 0
@@ -289,6 +290,7 @@ void kputc(int ch, void*)
     {
         char c = ch;
         flanterm_write(ctx, &c, 1);
+        print_charserial(ch);
     }
 }
 UACPI_PRINTF_DECL(1, 2)
@@ -297,6 +299,7 @@ void kprintf(const char* format, ...)
     va_list args;
     va_start (args, format);
     npf_vpprintf(kputc, NULL, format, args);
+    
     va_end(args);
 }
 
@@ -345,6 +348,23 @@ void _start(void) {
     ps2_init();
     test_vfs();
     parse_tar_and_populate_tmpfs(module_request.response->modules[0]);
+    uint64_t syscall = 0;
+    readmsr(0xC0000080, &syscall);
+    kprintf("syscall msr : %p\n", syscall);
+    kprintf("Enabling syscall extention...\n");
+    syscall |= 1;
+    writemsr(0xC0000080, syscall);
+    uint64_t star = 0;
+    readmsr(0xC0000081, &star);
+    star |= (((uint64_t)0x30 << 48) | 3);
+    star |= (((uint64_t)0x28 << 32) | 3);
+    writemsr(0xC0000081, star);
+    writemsr(0xC0000082, syscall_handler);
+    writemsr(0xC0000084, (1 << 9));
+    kprintf("Star MSR %p\n", star);
+    syscall_init();
+    ts.rsp0 = (uint64_t)(((uint64_t)pmm_alloc_singlep() + hhdm_request.response->offset) + 4096);
+    kprintf("rsp0: %p\n", ts.rsp0);
     sched_init();
     for (;;) {
         asm("hlt");

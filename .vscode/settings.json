@@ -29,5 +29,6 @@
         "compare": "c",
         "cstdint": "c",
         "format": "c"
-    }
+    },
+    "C_Cpp.default.compilerPath": "/usr/bin/gcc"
 }

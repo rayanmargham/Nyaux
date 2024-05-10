@@ -34,16 +34,16 @@ void kpanic(char *msg, struct StackFrame *frame)
         // STACK TRACE TIME :sunglasses:
         uint64_t *bas = frame->rbp;
         kprintf("--> 0x%lX\n", frame->rip);
-        while (bas != NULL)
-        {
-            uint64_t ret_addr = *(uint64_t*)((uint64_t)bas + sizeof(uint64_t)); // CAUSE TRACK GO DOWNWARD LOL
-            if (ret_addr == 0)
-            {
-                break;
-            }
-            kprintf("^-> 0x%lX in\n", ret_addr - 1); // FAULTING INSTRUCTION
-            bas = *bas;
-        }
+        // while (bas != NULL)
+        // {
+        //     uint64_t ret_addr = *(uint64_t*)((uint64_t)bas + sizeof(uint64_t)); // CAUSE TRACK GO DOWNWARD LOL
+        //     if (ret_addr == 0)
+        //     {
+        //         break;
+        //     }
+        //     kprintf("^-> 0x%lX in\n", ret_addr - 1); // FAULTING INSTRUCTION
+        //     bas = *bas;
+        // }
         asm ("cli"); // disable interrupts
         for (;;) {
         asm("hlt");
