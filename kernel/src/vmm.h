@@ -14,7 +14,7 @@ struct vmm_region
 };
 void vmm_region_dealloc(uint64_t base);
 void *vmm_region_alloc(uint64_t size, uint8_t flags);
-extern uint64_t *pml4;
+
 void update_cr3(uint64_t cr3_value);
 #define NYA_OS_VMM_PRESENT 1
 #define NYA_OS_VMM_RW (1 << 1)
@@ -22,4 +22,10 @@ void update_cr3(uint64_t cr3_value);
 void map(uint64_t *pml4, uint64_t virt, uint64_t phys, uint8_t flags);
 uint64_t *read_cr3();
 uint64_t *read_cr4();
+struct pagemap // represents a pagemap.
+{
+    struct vmm_region *head;
+    uint64_t *pml4;
+};
 void update_cr4(uint64_t cr4_value);
+extern struct pagemap kernel_pagemap;

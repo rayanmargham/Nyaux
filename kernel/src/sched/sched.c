@@ -68,8 +68,7 @@ volatile void switch_task(struct StackFrame *frame)
             writemsr(0xC0000101, (uint64_t)current_thread->gs_base);
             writemsr(0xC0000100, current_thread->fs);
         }
-        pml4 = current_thread->info->pagemap;
-        update_cr3((uint64_t)pml4);
+        update_cr3((uint64_t)current_thread->info->pagemap->pml4);
     }
     else
     {
@@ -83,8 +82,7 @@ volatile void switch_task(struct StackFrame *frame)
                 writemsr(0xC0000101, (uint64_t)current_thread->gs_base);
                 writemsr(0xC0000100, current_thread->fs);
             }
-            pml4 = current_thread->info->pagemap;
-            update_cr3((uint64_t)pml4);
+            update_cr3((uint64_t)current_thread->info->pagemap->pml4);
             return;
         }
         serial_print_color("Scheduler: Nothing to switch to!\n", 2);
@@ -92,7 +90,7 @@ volatile void switch_task(struct StackFrame *frame)
     }
 
 }
-struct cpu_context_t *new_context(uint64_t entry_func, uint64_t rsp, uint64_t pagemap, bool user)
+struct cpu_context_t *new_context(uint64_t entry_func, uint64_t rsp, bool user)
 
 {
     if (!user)
@@ -133,7 +131,7 @@ struct process_info *make_process_info(char *name, int pid)
     
     strcpy(new_process->name, name);
     new_process->pid = pid;
-    new_process->pagemap = pml4; // just set it to the kernels pagemap for now.
+    new_process->pagemap = &kernel_pagemap; // just set it to the kernels pagemap for now.
     new_process->root_vfs = root->list;
     new_process->cur_working_directory = root->list;
 
@@ -178,7 +176,7 @@ void sched_init()
     // uint64_t *new_poop = (uint64_t)(((uint64_t)pmm_alloc_singlep() + hhdm_request.response->offset) + 4096);
     struct process_info *e = make_process_info("Keyboard clearer thing", 0);
     uint64_t *new_kstack = (uint64_t)(((uint64_t)pmm_alloc_singlep() + hhdm_request.response->offset) + 4096); // CAUSE STACK GROWS DOWNWARDS
-    struct cpu_context_t *ctx = new_context((uint64_t)kthread_start, (uint64_t)new_kstack, (uint64_t)pml4, false);
+    struct cpu_context_t *ctx = new_context((uint64_t)kthread_start, (uint64_t)new_kstack, false);
     // struct cpu_context_t *timeforpoop = new_context((uint64_t)kthread_poop, (uint64_t)new_poop, pml4, false);
     // serial_print("Created New CPU Context for Kernel Thread\n");
     // serial_print("attempting to create kthread...\n");
@@ -187,10 +185,10 @@ void sched_init()
     
     start_of_queue = kthread;
     uint64_t pag = pmm_alloc_singlep();
-    map((uint64_t)pml4 + hhdm_request.response->offset, (uint64_t)0x1000, pag, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW | NYA_OS_VMM_USER);
+    map((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset, (uint64_t)0x1000, pag, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW | NYA_OS_VMM_USER);
     uint8_t user_program[] = { 0x31, 0xC0, 0x48, 0xC7, 0xC7, 0x0D, 0x10, 0x00, 0x00, 0x0F, 0x05, 0xEB, 0xFE, 0x68, 0x65, 0x6C, 0x6C, 0x6F, 0x00 };
     memcpy(0x1000, user_program, sizeof(user_program));
-    struct cpu_context_t *ctx2 = new_context(0x1000, 0x1000 + 4096, pml4, true);
+    struct cpu_context_t *ctx2 = new_context(0x1000, 0x1000 + 4096, true);
     struct thread_t *new_thread = create_thread(ctx2);
     struct process_info *c = make_process_info("User Thread", 1);
     new_thread->gs_base = kmalloc(sizeof(struct per_thread_cpu_info_t));

@@ -28,7 +28,8 @@
         "apic.h": "c",
         "compare": "c",
         "cstdint": "c",
-        "format": "c"
+        "format": "c",
+        "*.tcc": "c"
     },
     "C_Cpp.default.compilerPath": "/usr/bin/gcc"
 }

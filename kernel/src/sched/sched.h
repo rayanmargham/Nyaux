@@ -23,7 +23,7 @@ struct process_info
 {
     // PER PROCESS INFO
     struct vnode *root_vfs;
-    uint64_t *pagemap; // PAGE MAP OF PROCESS
+    struct pagemap *pagemap;
     struct vnode *cur_working_directory;
     char name[32]; // PROCESS NAME
     uint64_t pid;
