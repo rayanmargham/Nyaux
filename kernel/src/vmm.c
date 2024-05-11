@@ -1,6 +1,7 @@
 #include "pmm.h"
 #include "drivers/serial.h"
 #include "main.h"
+#include <stdint.h>
 #include "vmm.h"
 
 extern char THE_REAL[];
@@ -33,6 +34,16 @@ uint64_t *read_cr4()
     uint64_t cr4;
     __asm__ volatile ("mov %%cr4, %0" : "=r"(cr4) :: "memory");
     return cr4;
+}
+void update_cr0(uint64_t cr0_value)
+{
+    __asm__ volatile("mov %0, %%cr0" :: "r"((uint64_t)cr0_value) : "memory");
+}
+uint64_t *read_cr0()
+{
+    uint64_t cr0;
+    __asm__ volatile ("mov %%cr0, %0" : "=r"(cr0) :: "memory");
+    return cr0;
 }
 uint64_t align_down(uint64_t addr, size_t page_size)
 {
@@ -165,6 +176,18 @@ uint64_t unmap(uint64_t *pml4, uint64_t virt)
     }
     return old;
 
+}
+void *mmap_range(struct pagemap *user_map, uint64_t base_virt, uint64_t size_in_bytes, uint8_t flags)
+{
+    int num_of_pages = align_up(size_in_bytes, 4096) / 4096;
+    kprintf("num of pages: %d\n", num_of_pages);
+    for (int i = 0; i !=  num_of_pages; i++)
+    {
+        void *page = pmm_alloc_singlep();
+        memset(page + hhdm_request.response->offset, 0, 4096);
+        map((uint64_t)user_map->pml4 + hhdm_request.response->offset, base_virt + (i * 0x1000), page, flags);
+    }
+    return base_virt;
 }
 void *vmm_region_alloc_user(struct pagemap *user_map, uint64_t size, uint8_t flags)
 {

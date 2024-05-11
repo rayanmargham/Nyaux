@@ -365,6 +365,16 @@ void _start(void) {
     syscall_init();
     ts.rsp0 = (uint64_t)(((uint64_t)pmm_alloc_singlep() + hhdm_request.response->offset) + 4096);
     kprintf("rsp0: %p\n", ts.rsp0);
+    uint64_t cr0 = read_cr0();
+    cr0 |= (1 << 1);
+    cr0 = cr0 & ~(0 << 2);
+    update_cr0(cr0);
+    uint64_t cr4 = read_cr4();
+    cr4 |= (1 << 9);
+    cr4 |= (1 << 10);
+    update_cr4(cr4);
+
+    // we have just enabled sse
     sched_init();
     for (;;) {
         asm("hlt");

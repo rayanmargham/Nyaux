@@ -1,5 +1,8 @@
 #include "tmpfs.h"
+#include "fs/vfs.h"
 #include "main.h"
+#include <lib/kpanic.h>
+#include <sys/types.h>
 
 int vnode_lookup(struct vnode *v, char *part, struct vnode **res)
 {
@@ -14,8 +17,9 @@ int vnode_lookup(struct vnode *v, char *part, struct vnode **res)
         }
         while (ok)
         {
-            if (strncmp(ok->name, part, strlen(part) - 1) == 0)
+            if (strcmp(ok->name, part) == 0)
             {
+                
                 *res = ok->ptr_to_vnode;
                 return 0;
             }
@@ -70,10 +74,6 @@ int vnode_create(struct vnode *dirtocreatefilein, const char *name, struct vnode
         memset(thename, 0, strlen(name) + 1);
         strcpy(thename, name);
         // create dir entry
-        if (dir->head)
-        {
-            kprintf("Somethings in this dir entry named: %s\n", dir->head->name);
-        }
         struct tmpfs_dir_entry *new_dir_entry = kmalloc(sizeof(struct tmpfs_dir_entry));
         memset(new_dir_entry, 0, sizeof(struct tmpfs_dir_entry));
         new_dir_entry->name = thename;
@@ -122,6 +122,7 @@ int vnode_rdwr(struct vnode *v, size_t size_of_buf, size_t offset, void *buf, in
             struct tmpfs_node *file = v->data;
             if (file->size == 0)
             {
+                
                 file->data = kmalloc(size_of_buf + offset);
                 file->size = size_of_buf + offset;
                 
@@ -133,10 +134,6 @@ int vnode_rdwr(struct vnode *v, size_t size_of_buf, size_t offset, void *buf, in
                 file->size = size_of_buf + offset;
             }
             memcpy(file->data + offset, buf, size_of_buf);
-            if (size_of_buf == 845832)
-            {
-                kprintf("Address of file data: %p\n", file->data);
-            }
             return 0;
         }
     }

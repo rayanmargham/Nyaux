@@ -43,4 +43,4 @@ typedef struct
     int a_type;
     long a_val;
 } Elf64_auxvec;
-struct thread_t *load_elf_program(struct pagemap *maps, uint64_t base, struct vnode *file, int argc, char **argv, char *envp[], uint64_t entry);
+struct thread_t *load_elf_program(struct pagemap *maps, uint64_t base, struct vnode *file, int argc, char **argv, char *envp[], uint64_t entry, uint64_t phdr_virt, uint64_t phent, uint64_t phnum);

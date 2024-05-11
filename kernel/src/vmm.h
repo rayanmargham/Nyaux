@@ -33,3 +33,6 @@ struct pagemap *new_pagemap();
 void vmm_region_dealloc_user(struct pagemap *user_map, uint64_t base);
 void *vmm_region_alloc_user(struct pagemap *user_map, uint64_t size, uint8_t flags);
 uint64_t virt_to_phys(uint64_t *pml4, uint64_t virt);
+void *mmap_range(struct pagemap *user_map, uint64_t base_virt, uint64_t size_in_bytes, uint8_t flags);
+uint64_t *read_cr0();
+void update_cr0(uint64_t cr0_value);

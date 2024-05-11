@@ -213,7 +213,7 @@ void sched_init()
     }
     struct pagemap *for_elf = new_pagemap();
     kprintf("Addr of file data from found vnode: %p\n", ((struct tmpfs_node*)pro->data)->data);
-    struct thread_t *fr = load_elf_program(for_elf, 0, pro, 0, NULL, NULL, NULL);
+    struct thread_t *fr = load_elf_program(for_elf, 0, pro, 0, NULL, NULL, NULL, NULL, NULL, NULL);
     if (fr)
     {
         fr->next = start_of_queue;

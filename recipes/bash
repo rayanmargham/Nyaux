@@ -39,5 +39,5 @@ package() {
     make install DESTDIR="${dest_dir}"
     ln -s bash "${dest_dir}${prefix}"/bin/sh
 
-    post_package_strip
+    # post_package_strip
 }
