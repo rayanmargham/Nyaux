@@ -19,9 +19,9 @@ syscall_handler:
     push r13
     push r14
     push r15
-    mov rdi, rsp
     mov rsi, [gs:16]
-    mov rax, [syscall_handlers + rax * 8]
+    mov rax, [syscall_handlers + rdi * 8]
+    mov rdi, rsp
     call rax
     pop r15
     pop r14

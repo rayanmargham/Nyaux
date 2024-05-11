@@ -208,7 +208,6 @@ void *vmm_region_alloc_user(struct pagemap *user_map, uint64_t size, uint8_t fla
             new_guy->base = (prev_node->base + prev_node->length);
             
             new_guy->length = align_up(size, 4096);
-            kprintf("vmm: Allocating Region %p length: %p\n", new_guy->base, new_guy->length);
             prev_node->next = new_guy;
             new_guy->next = cur_node;
             cur_node = cur_node->next;
@@ -218,7 +217,6 @@ void *vmm_region_alloc_user(struct pagemap *user_map, uint64_t size, uint8_t fla
                 void *page = pmm_alloc_singlep();
                 // memzero that shit!
                 memset(page + hhdm_request.response->offset, 0, 4096);
-                kprintf("Mapping Virtual Address %p\n", new_guy->base + (i * 0x1000));
                 map((uint64_t)user_map->pml4 + hhdm_request.response->offset, new_guy->base + (i * 0x1000), page, flags);
             }
             

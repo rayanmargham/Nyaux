@@ -174,7 +174,23 @@ struct process_info *get_cur_process_info()
 {
     return current_thread->info;
 }
-
+struct pagemap *get_current_pagemap_process()
+{
+    if (current_thread)
+    {
+        struct process_info *c = current_thread->info;
+        if (c->pagemap)
+        {
+            return c->pagemap;
+        }
+        else {
+            return NULL;
+        }
+    }
+    else {
+        return NULL;
+    }
+}
 void sched_init()
 {
     // uint64_t *new_poop = (uint64_t)(((uint64_t)pmm_alloc_singlep() + hhdm_request.response->offset) + 4096);
@@ -188,24 +204,9 @@ void sched_init()
     kthread->info = e;
     
     start_of_queue = kthread;
-    uint64_t pag = pmm_alloc_singlep();
-    struct pagemap *map = new_pagemap();
-    vmm_region_alloc_user(map, 0x1000, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW | NYA_OS_VMM_USER);
-    uint8_t user_program[] = { 0x31, 0xC0, 0x48, 0xC7, 0xC7, 0x0D, 0x00, 0x00, 0x00, 0x0F, 0x05, 0xEB, 0xFE, 0x68, 0x65, 0x6C, 0x6C, 0x6F, 0x00 };
-    memcpy(virt_to_phys((uint64_t)map->pml4 + hhdm_request.response->offset, 0x0) + hhdm_request.response->offset, user_program, sizeof(user_program));
-    struct cpu_context_t *ctx2 = new_context(0x0, 0x0 + 4096, true);
-    struct thread_t *new_thread = create_thread(ctx2);
-    struct process_info *c = make_process_info("User Thread", 1);
-    c->pagemap = map;
-    new_thread->gs_base = kmalloc(sizeof(struct per_thread_cpu_info_t));
-    new_thread->gs_base->kernel_stack_ptr = (uint64_t)(((uint64_t)pmm_alloc_singlep() + hhdm_request.response->offset) + 4096);
-    new_thread->gs_base->user_stack_ptr = 0x0 + 4096;
-    new_thread->gs_base->ptr = new_thread->gs_base;
     kthread->gs_base = kmalloc(sizeof(struct per_thread_cpu_info_t));
     kthread->gs_base->kernel_stack_ptr = (uint64_t)new_kstack;
     kthread->gs_base->ptr = kthread->gs_base;
-    new_thread->info = c;
-    kthread->next = new_thread;
     struct vnode *pro = vnode_path_lookup(root->list, "/usr/bin/bash", false, NULL);
     if (!pro)
     {

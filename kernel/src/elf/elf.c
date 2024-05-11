@@ -58,6 +58,7 @@ struct thread_t *load_elf_program(struct pagemap *maps, uint64_t base, struct vn
         if (interp == true)
         {
             kprintf("Going in\n");
+            kprintf("Giving %p and pushing p\n", stored);
             return load_elf_program(maps, 0x40000000, vnode_path_lookup(root->list, path, false, NULL), argc, argv, envp, base + hdr.e_entry, stored, hdr.e_phentsize, hdr.e_phnum);
         }
         mmap_range(maps, NEW_THREAD_STACK, 512000, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW | NYA_OS_VMM_USER);
@@ -69,6 +70,11 @@ struct thread_t *load_elf_program(struct pagemap *maps, uint64_t base, struct vn
         new_guy->gs_base->kernel_stack_ptr = (uint64_t)(((uint64_t)pmm_alloc_singlep() + hhdm_request.response->offset) + 4096);
         new_guy->gs_base->user_stack_ptr = NEW_THREAD_STACK + 512000;
         // PUSH AUX VECS
+        new_guy->parameter_window_size += sizeof(Elf64_auxvec);
+        Elf64_auxvec null = {};
+        null.a_type = 0;
+        null.a_val = 0;
+        *(Elf64_auxvec*)(new_guy->gs_base->user_stack_ptr - new_guy->parameter_window_size) = null;
         if (entry)
         {
             new_guy->parameter_window_size += sizeof(Elf64_auxvec);
@@ -95,11 +101,7 @@ struct thread_t *load_elf_program(struct pagemap *maps, uint64_t base, struct vn
         phnum_aux.a_val = phnum;
         *(Elf64_auxvec*)(new_guy->gs_base->user_stack_ptr - new_guy->parameter_window_size) = phnum_aux;
 
-        new_guy->parameter_window_size += sizeof(Elf64_auxvec);
-        Elf64_auxvec null = {};
-        null.a_type = 0;
-        null.a_val = 0;
-        *(Elf64_auxvec*)(new_guy->gs_base->user_stack_ptr - new_guy->parameter_window_size) = null;
+        
         
 
 
@@ -114,21 +116,12 @@ struct thread_t *load_elf_program(struct pagemap *maps, uint64_t base, struct vn
             new_guy->parameter_window_size += sizeof(envp);
             *(char***)(new_guy->gs_base->user_stack_ptr - new_guy->parameter_window_size) = envp;
         }
-        else {
-            new_guy->parameter_window_size += sizeof(uint64_t);
-            *(char***)(new_guy->gs_base->user_stack_ptr - new_guy->parameter_window_size) = 0;
-        }
         new_guy->parameter_window_size += sizeof(uint64_t);
         *(uint64_t*)(new_guy->gs_base->user_stack_ptr - new_guy->parameter_window_size) = 0;
         if (argv)
         {
             new_guy->parameter_window_size += sizeof(argv);
             *(char***)(new_guy->gs_base->user_stack_ptr - new_guy->parameter_window_size) = argv;
-            
-        }
-        else {
-            new_guy->parameter_window_size += sizeof(uint64_t);
-            *(uint64_t***)(new_guy->gs_base->user_stack_ptr - new_guy->parameter_window_size) = 0;
             
         }
         new_guy->parameter_window_size += sizeof(uint64_t);

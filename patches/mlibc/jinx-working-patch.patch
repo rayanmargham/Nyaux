@@ -31,6 +31,19 @@ index 3474615..e034881 100644
  }
  
  char **backtrace_symbols(void *const *, int) {
+diff --git mlibc-clean/options/rtld/generic/main.cpp mlibc-workdir/options/rtld/generic/main.cpp
+index 360ed37..d6273d1 100644
+--- mlibc-clean/options/rtld/generic/main.cpp
++++ mlibc-workdir/options/rtld/generic/main.cpp
+@@ -40,7 +40,7 @@ namespace mlibc {
+ 
+ mlibc::RtldConfig rtldConfig;
+ 
+-bool ldShowAuxv = false;
++bool ldShowAuxv = true;
+ 
+ uintptr_t *entryStack;
+ frg::manual_box<ObjectRepository> initialRepository;
 diff --git mlibc-workdir/sysdeps/nyaux/generic/entry.cpp mlibc-workdir/sysdeps/nyaux/generic/entry.cpp
 new file mode 100644
 index 0000000..d6e800c
@@ -80,10 +93,10 @@ index 0000000..d6e800c
 +}
 diff --git mlibc-workdir/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 new file mode 100644
-index 0000000..6822308
+index 0000000..359a80b
 --- /dev/null
 +++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
-@@ -0,0 +1,428 @@
+@@ -0,0 +1,438 @@
 +#include <bits/ensure.h>
 +#include <mlibc/debug.hpp>
 +#include <mlibc/all-sysdeps.hpp>
@@ -91,6 +104,7 @@ index 0000000..6822308
 +#include <dirent.h>
 +#include <fcntl.h>
 +#include <limits.h>
++#include <stdint.h>
 +#include <stdlib.h>
 +#include "syscall.h"
 +
@@ -128,7 +142,7 @@ index 0000000..6822308
 +}
 +
 +void sys_libc_panic() {
-+	sys_libc_log("\nMLIBC PANIC\n");
++	sys_libc_log("MLIBC PANIC\n");
 +	sys_exit(1);
 +	__builtin_unreachable();
 +}
@@ -304,7 +318,16 @@ index 0000000..6822308
 +#endif
 +
 +int sys_vm_map(void *hint, size_t size, int prot, int flags,
-+			   int fd, off_t offset, void **window) STUB_ONLY;
++			   int fd, off_t offset, void **window) 
++{
++	__syscall_ret ret = __syscall(1, hint, size, (uint64_t)prot << 32 | (uint64_t)flags, fd, offset);
++	if (ret.errno != 0)
++	{
++		return ret.errno;
++	}
++	*window = (void*)ret.ret;
++	return 0;
++};
 +int sys_vm_unmap(void *pointer, size_t size) STUB_ONLY;
 +#ifndef MLIBC_BUILDING_RTLD
 +

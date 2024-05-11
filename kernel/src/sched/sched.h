@@ -45,3 +45,4 @@ void sched_init();
 struct process_info *make_process_info(char *name, int pid);
 struct thread_t *create_thread(struct cpu_context_t *it);
 struct cpu_context_t *new_context(uint64_t entry_func, uint64_t rsp, bool user);
+struct pagemap *get_current_pagemap_process();
