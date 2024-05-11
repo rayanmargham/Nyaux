@@ -1,4 +1,5 @@
 #include "tmpfs.h"
+#include "main.h"
 
 int vnode_lookup(struct vnode *v, char *part, struct vnode **res)
 {
@@ -45,9 +46,9 @@ int vnode_mkdir(struct vnode *v, const char *name, struct vnode **newdir)
         new->data = newdirfr;
         struct tmpfs_dir_entry *new_dir_entry = kmalloc(sizeof(struct tmpfs_dir_entry));
         memset(new_dir_entry, 0, sizeof(struct tmpfs_dir_entry));
-        new_dir_entry->name = kmalloc(strlen(name));
-        memset(new_dir_entry->name, 0, strlen(name));
-        memcpy(new_dir_entry->name, name, strlen(name));
+        new_dir_entry->name = kmalloc(strlen(name) + 1);
+        memset(new_dir_entry->name, 0, strlen(name) + 1);
+        strcpy(new_dir_entry->name, name);
         new_dir_entry->ptr_to_vnode = new;
         new_dir_entry->next = dir->head;
         dir->head = new_dir_entry;
@@ -63,13 +64,16 @@ int vnode_create(struct vnode *dirtocreatefilein, const char *name, struct vnode
 {
     if (dirtocreatefilein->type == NYAVNODE_DIR)
     {
-        kprintf("creating file with name %s\n", name);
         // create name lol
         struct tmpfs_dir *dir = dirtocreatefilein->data;
-        char *thename = kmalloc(strlen(name));
-        memset(thename, 0, strlen(name));
-        memcpy(thename, name, strlen(name));
+        char *thename = kmalloc(strlen(name) + 1);
+        memset(thename, 0, strlen(name) + 1);
+        strcpy(thename, name);
         // create dir entry
+        if (dir->head)
+        {
+            kprintf("Somethings in this dir entry named: %s\n", dir->head->name);
+        }
         struct tmpfs_dir_entry *new_dir_entry = kmalloc(sizeof(struct tmpfs_dir_entry));
         memset(new_dir_entry, 0, sizeof(struct tmpfs_dir_entry));
         new_dir_entry->name = thename;
@@ -104,8 +108,11 @@ int vnode_rdwr(struct vnode *v, size_t size_of_buf, size_t offset, void *buf, in
                 // file dont exist, failure!
                 return 0;
             }
-            size_t calculated_size = file->size - offset;
-            memcpy(buf, file->data + offset, calculated_size);
+            memcpy(buf, file->data + offset, size_of_buf);
+            if (size_of_buf == 0x40)
+            {
+                
+            }
             return 0;
             
         }
@@ -117,6 +124,7 @@ int vnode_rdwr(struct vnode *v, size_t size_of_buf, size_t offset, void *buf, in
             {
                 file->data = kmalloc(size_of_buf + offset);
                 file->size = size_of_buf + offset;
+                
                 memset(file->data, 0, file->size);
             }
             else if (size_of_buf + offset > file->size)
@@ -125,6 +133,10 @@ int vnode_rdwr(struct vnode *v, size_t size_of_buf, size_t offset, void *buf, in
                 file->size = size_of_buf + offset;
             }
             memcpy(file->data + offset, buf, size_of_buf);
+            if (size_of_buf == 845832)
+            {
+                kprintf("Address of file data: %p\n", file->data);
+            }
             return 0;
         }
     }

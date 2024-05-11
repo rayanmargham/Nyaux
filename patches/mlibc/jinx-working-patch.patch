@@ -80,10 +80,10 @@ index 0000000..d6e800c
 +}
 diff --git mlibc-workdir/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 new file mode 100644
-index 0000000..a58b190
+index 0000000..6822308
 --- /dev/null
 +++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
-@@ -0,0 +1,424 @@
+@@ -0,0 +1,428 @@
 +#include <bits/ensure.h>
 +#include <mlibc/debug.hpp>
 +#include <mlibc/all-sysdeps.hpp>
@@ -92,6 +92,7 @@ index 0000000..a58b190
 +#include <fcntl.h>
 +#include <limits.h>
 +#include <stdlib.h>
++#include "syscall.h"
 +
 +
 +
@@ -121,7 +122,10 @@ index 0000000..a58b190
 +
 +namespace mlibc {
 +
-+void sys_libc_log(const char *message) STUB_ONLY;
++void sys_libc_log(const char *message) 
++{
++	__syscall(0, message);
++}
 +
 +void sys_libc_panic() {
 +	sys_libc_log("\nMLIBC PANIC\n");
@@ -508,6 +512,28 @@ index 0000000..a58b190
 +#endif
 +
 +} // namespace mlibc
+diff --git mlibc-workdir/sysdeps/nyaux/generic/syscall.h mlibc-workdir/sysdeps/nyaux/generic/syscall.h
+new file mode 100644
+index 0000000..f421220
+--- /dev/null
++++ mlibc-workdir/sysdeps/nyaux/generic/syscall.h
+@@ -0,0 +1,16 @@
++#include <stdint.h>
++
++struct __syscall_ret {
++	uint64_t ret;
++	uint64_t errno;
++};
++
++__attribute__((naked))
++static __syscall_ret __syscall(int number, ...) {
++	asm (
++		"mov %rcx, %r10\n\t"
++		"syscall\n\t"
++		"ret"
++	);
++	(void)number;
++}
 diff --git mlibc-workdir/sysdeps/nyaux/include/abi-bits/access.h mlibc-workdir/sysdeps/nyaux/include/abi-bits/access.h
 new file mode 120000
 index 0000000..cb83931

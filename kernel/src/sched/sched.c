@@ -1,10 +1,14 @@
 #include "sched.h"
+#include "fs/vfs.h"
+#include "lib/kpanic.h"
 #include "main.h"
 #include "drivers/serial.h"
 #include "vmm.h"
 #include "pmm.h"
 #include "drivers/ps2.h"
 #include <ACPI/acpi.h>
+#include <elf/elf.h>
+#include <fs/tmpfs.h>
 
 struct thread_t *start_of_queue;
 struct thread_t *current_thread;
@@ -202,6 +206,22 @@ void sched_init()
     kthread->gs_base->ptr = kthread->gs_base;
     new_thread->info = c;
     kthread->next = new_thread;
+    struct vnode *pro = vnode_path_lookup(root->list, "/usr/bin/bash", false, NULL);
+    if (!pro)
+    {
+        kpanic("frick u\n", NULL);
+    }
+    struct pagemap *for_elf = new_pagemap();
+    kprintf("Addr of file data from found vnode: %p\n", ((struct tmpfs_node*)pro->data)->data);
+    struct thread_t *fr = load_elf_program(for_elf, 0, pro, 0, NULL, NULL, NULL);
+    if (fr)
+    {
+        fr->next = start_of_queue;
+        start_of_queue = fr;
+    }
+    else {
+        kprintf("Failed to load elf program!\n");
+    }
     asm ("sti");
     // // lets create another thread trollage
     // struct thread_t *pooper = create_thread(timeforpoop);

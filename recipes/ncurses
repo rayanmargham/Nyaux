@@ -1,0 +1,52 @@
+name=ncurses
+version=6.5.20240504
+revision=1
+tarball_url="https://github.com/ThomasDickey/ncurses-snapshots/archive/refs/tags/v6_5_20240504.tar.gz"
+tarball_blake2b="5590f7451eca39c8b486175688568669827d8a8a55b2327a14f82a0de4685a3c2c3d97450a2c5039aeb9794a943146cf2b451cfaa9b806ee142c3b71cb819079"
+source_hostdeps="autoconf automake libtool pkg-config"
+imagedeps="gcc ncurses patchelf"
+hostdeps="gcc automake autoconf libtool pkg-config"
+deps="core-libs"
+
+regenerate() {
+    cp -pv /usr/local/share/libtool/build-aux/config.guess ./
+    cp -pv /usr/local/share/libtool/build-aux/config.sub ./
+}
+
+build() {
+        cf_cv_func_nanosleep=yes \
+    autotools_configure \
+        --enable-widec \
+        --enable-pc-files \
+        --with-shared \
+        --with-cxx-shared \
+        --without-normal \
+        --without-debug \
+        --with-manpage-format=normal \
+        --with-pkg-config-libdir=/usr/lib/pkgconfig \
+        --with-termlib \
+        --without-ada
+
+    make -j${parallelism}
+}
+
+package() {
+    make install DESTDIR="${dest_dir}"
+
+    # As we build ncurses with wide character support, make some compatibility links
+    for lib in ncurses ncurses++ form panel menu tinfo ; do
+       rm -vf                    "${dest_dir}${prefix}"/lib/lib${lib}.so
+       echo "INPUT(-l${lib}w)" > "${dest_dir}${prefix}"/lib/lib${lib}.so
+       ln -sfv ${lib}w.pc        "${dest_dir}${prefix}"/lib/pkgconfig/${lib}.pc
+       # Set library soname
+       patchelf --set-soname lib${lib}w.so "${dest_dir}${prefix}"/lib/lib${lib}w.so
+    done
+    rm -vf                     "${dest_dir}${prefix}"/lib/libcursesw.so
+    echo "INPUT(-lncursesw)" > "${dest_dir}${prefix}"/lib/libcursesw.so
+    ln -sfv libncurses.so      "${dest_dir}${prefix}"/lib/libcurses.so
+
+    # Remove static libraries
+    rm -rf "${dest_dir}${prefix}"/lib/*.a
+
+    post_package_strip
+}

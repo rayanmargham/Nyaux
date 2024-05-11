@@ -37,7 +37,11 @@ struct thread_t
     struct process_info *info;
     uint64_t fs; // FOR VARRIABLES PER THREAD, CONFUSING IK BUT MLIBC USES THIS SHIT!!!!
     struct per_thread_cpu_info_t *gs_base;
+    size_t parameter_window_size;
 };
 volatile void switch_task(struct StackFrame *frame);
 struct process_info *get_cur_process_info();
 void sched_init();
+struct process_info *make_process_info(char *name, int pid);
+struct thread_t *create_thread(struct cpu_context_t *it);
+struct cpu_context_t *new_context(uint64_t entry_func, uint64_t rsp, bool user);

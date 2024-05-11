@@ -1,4 +1,5 @@
 #include "tar.h"
+#include "main.h"
 #include <fs/vfs.h>
 #include <fs/tmpfs.h>
 #include <vmm.h>
@@ -52,7 +53,12 @@ void parse_tar_and_populate_tmpfs(struct limine_file *archive)
             vfs_create(roo, hdr_ptr->name, 1, &notneeded);
             if (notneeded)
             {
+                
                 notneeded->ops->v_rdwr(notneeded, getsize(hdr_ptr->filesize_octal), 0, (void*)hdr_ptr + 512, 1);
+                if (strncmp(hdr_ptr->name, "usr/bin/bash", strlen(hdr_ptr->name)) == 0)
+                {
+                    kprintf("Elf Magic of bash file: %x\n", *(char*)((struct tmpfs_node*)notneeded->data)->data);
+                }
             }
             hdr_ptr = (void*)hdr_ptr + 512 + align_up(getsize(hdr_ptr->filesize_octal), 512);
         }

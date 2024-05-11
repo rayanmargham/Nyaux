@@ -25,8 +25,8 @@ char *strchr(const char *p, int ch)
 
 struct vnode *vnode_path_lookup(struct vnode *cur, const char *path, bool getparent, char *componentlast)
 {
+    
     struct vnode *cur_vnode = cur;
-    char *ptr = path;
     size_t pathlen = strlen(path);
     char *work_with_me = kmalloc(pathlen + 1);
     memset(work_with_me, 0, pathlen + 1);
@@ -60,6 +60,7 @@ struct vnode *vnode_path_lookup(struct vnode *cur, const char *path, bool getpar
         }
         if (islast && getparent == true)
         {
+            
             strcpy(componentlast, component);
             return cur_vnode;
         }
@@ -75,12 +76,23 @@ struct vnode *vnode_path_lookup(struct vnode *cur, const char *path, bool getpar
             }
             else
             {
+                if (strncmp(component, "bash", sizeof("bash")) == 0)
+                {
+                    struct tmpfs_node *shit = res->data;
+                }
                 return res; // this is a file 1000000% looool
             }
         }
         else
         {
-            return NULL; // NOT FOUND? IG?
+            strcpy(componentlast, component);
+            if (cur_vnode)
+            {
+                return cur_vnode;
+            }
+            else {
+                return NULL;
+            }
         }
         
     }
@@ -98,6 +110,7 @@ int vfs_create(struct vnode *indir, char *path, int type, struct vnode **res)
     struct vnode *our_par = vnode_path_lookup(indir, path, true, component);
     if (!our_par)
     {
+        kprintf("Fucking Failed\n");
         kfree(component, strlen(path) + 1);
         return -1;
     }
