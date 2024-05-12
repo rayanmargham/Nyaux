@@ -64,6 +64,7 @@ override CFLAGS += \
 override CPPFLAGS := \
     -D UACPI_OVERRIDE_STDLIB \
     -I src \
+    -D UACPI_SIZED_FREES \
     -I src/ACPI \
     -I src/ACPI/uACPI/include/ \
     $(CPPFLAGS) \

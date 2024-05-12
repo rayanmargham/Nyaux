@@ -10,6 +10,7 @@
 struct cpu_context_t
 {
     struct StackFrame frame;
+    void *fpu_state;
 };
 struct per_thread_cpu_info_t
 {
@@ -46,3 +47,12 @@ struct process_info *make_process_info(char *name, int pid);
 struct thread_t *create_thread(struct cpu_context_t *it);
 struct cpu_context_t *new_context(uint64_t entry_func, uint64_t rsp, bool user);
 struct pagemap *get_current_pagemap_process();
+struct fpu_state_t
+{
+    uint16_t fcw;
+    uint32_t rev0;
+    uint16_t rev;
+    uint64_t rev2;
+    uint64_t rev3;
+    uint32_t mxcsr;
+} __attribute__((packed));

@@ -9,6 +9,7 @@
 #include <ACPI/acpi.h>
 #include <elf/elf.h>
 #include <fs/tmpfs.h>
+#include <fpu/xsave.h>
 
 struct thread_t *start_of_queue;
 struct thread_t *current_thread;
@@ -16,10 +17,12 @@ char e[64];
 void switch_context(struct StackFrame *frame, struct cpu_context_t *ctx)
 {
     *frame = ctx->frame;
+    xrstore((uint64_t)ctx->fpu_state);
 }
 void save_context(struct StackFrame *frame, struct cpu_context_t *ctx)
 {
     ctx->frame = *frame;
+    xsave((uint64_t)ctx->fpu_state);
 }
 void switch_task(struct StackFrame *frame)
 {
@@ -106,6 +109,19 @@ struct cpu_context_t *new_context(uint64_t entry_func, uint64_t rsp, bool user)
         new_guy->frame.rflags = 0x202;
         new_guy->frame.cs = 0x28; // KERNEL CODE
         new_guy->frame.ss = 0x30; // KERNEL DATA
+        new_guy->fpu_state = kmalloc(align_up(xsave_size, 4096));
+        memset(new_guy->fpu_state, 0, xsave_size);
+        struct fpu_state_t *state = new_guy->fpu_state;
+        // As per SYS V abi spec
+        state->fcw = (1 << 0) |    // IM
+                    (1 << 1) |    // DM
+                    (1 << 2) |    // ZM
+                    (1 << 3) |    // OM
+                    (1 << 4) |    // UM
+                    (1 << 5) |    // PM
+                    (0b11 << 8);  // PC
+        // stolen from managarm for funny
+        state->mxcsr = 0b1111110000000;
         return new_guy;
 
     }
@@ -119,6 +135,12 @@ struct cpu_context_t *new_context(uint64_t entry_func, uint64_t rsp, bool user)
         new_guy->frame.rflags = 0x202;
         new_guy->frame.cs = 0x40 | (3); // USER CODE
         new_guy->frame.ss = 0x38 | (3); // USER DATA
+        new_guy->fpu_state = kmalloc(align_up(xsave_size, 4096));
+        memset(new_guy->fpu_state, 0, xsave_size);
+        struct fpu_state_t *state = new_guy->fpu_state;
+        // As per SYS V abi spec
+        state->fcw = (0xFF << 1);
+        state->mxcsr = 0xFC;
         return new_guy;
     }
 }

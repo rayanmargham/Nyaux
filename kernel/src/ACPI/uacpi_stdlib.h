@@ -1,10 +1,12 @@
 #include <stddef.h>
 #include <main.h>
+#include <lib/nanoprintf.h>
 
 
 #define UACPI_PRIx64 "lx"
 #define UACPI_PRIX64 "lX"
 #define UACPI_PRIu64 "lu"
+#define PRIu64 "lu"
 
 #define uacpi_memcpy memcpy
 #define uacpi_memset memset

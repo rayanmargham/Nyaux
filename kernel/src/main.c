@@ -13,6 +13,7 @@
 #include "fs/vfs.h"
 #include "fs/tar.h"
 #include <syscall/syscall.h>
+#include <fpu/xsave.h>
 #define NANOPRINTF_USE_FIELD_WIDTH_FORMAT_SPECIFIERS 1
 #define NANOPRINTF_USE_PRECISION_FORMAT_SPECIFIERS 1
 #define NANOPRINTF_USE_FLOAT_FORMAT_SPECIFIERS 0
@@ -365,8 +366,8 @@ void _start(void) {
     cr4 |= (1 << 9);
     cr4 |= (1 << 10);
     update_cr4(cr4);
-    write_color(ctx, "Syscalls Enabled, SSE Enabled, Entering Scheduler...\n", 1);
-
+    setup_xsave();
+    write_color(ctx, "Syscalls Enabled, SSE and XSave Enabled, Entering Scheduler...\n", 1);
     // we have just enabled sse
     sched_init();
     for (;;) {
