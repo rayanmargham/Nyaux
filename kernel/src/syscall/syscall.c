@@ -15,9 +15,10 @@ void RegisterSyscall(int syscall, void (*func)(struct syscall_frame *frame, stru
 void syscall_log_mlibc(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr)
 {
     char *msg = frame->rsi;
-    if (msg)
+    kprintf("userland: %s\n", msg);
+    if (strcmp(msg, "MLIBC PANIC\n") == 0)
     {
-        kprintf("userland: %s\n", msg);
+        kpanic("Mlibc Panicked!\n", NULL);
     }
 }
 

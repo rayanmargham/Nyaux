@@ -373,6 +373,7 @@ void _start(void) {
     cr4 |= (1 << 9);
     cr4 |= (1 << 10);
     update_cr4(cr4);
+    write_color(ctx, "Syscalls Enabled, SSE Enabled, Entering Scheduler...\n", 1);
 
     // we have just enabled sse
     sched_init();
