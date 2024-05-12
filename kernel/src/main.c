@@ -198,21 +198,15 @@ size_t strnlen(const char *s, size_t maxlen)
 	}
 	return (len);
 }
-int strncmp(s1, s2, n)
-	register const char *s1, *s2;
-	register size_t n;
-{
-
-	if (n == 0)
-		return (0);
-	do {
-		if (*s1 != *s2++)
-			return (*(unsigned char *)s1 - *(unsigned char *)--s2);
-		if (*s1++ == 0)
-			break;
-	} while (--n != 0);
-	return (0);
-};
+int strncmp(const char* a, const char* b, size_t len) {
+    for (; len; --len, ++a, ++b) {
+        int ret = *a - *b;
+        if (ret != 0 || !*a || !*b) {
+            return ret;
+        }
+    }
+    return 0;
+}
 int strcmp(const char *s1, const char *s2)
 {
 	while (*s1 == *s2++)
@@ -220,9 +214,7 @@ int strcmp(const char *s1, const char *s2)
 			return (0);
 	return (*(const unsigned char *)s1 - *(const unsigned char *)(s2 - 1));
 }
-char *strcpy(to, from)
-	register char *to;
-	register const char *from;
+char *strcpy(char *to, const char *from)
 {
 	char *save = to;
 
