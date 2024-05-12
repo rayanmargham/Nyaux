@@ -62,7 +62,9 @@ override CFLAGS += \
 
 # Internal C preprocessor flags that should not be changed by the user.
 override CPPFLAGS := \
+    -D UACPI_OVERRIDE_STDLIB \
     -I src \
+    -I src/ACPI \
     -I src/ACPI/uACPI/include/ \
     $(CPPFLAGS) \
     -MMD \
