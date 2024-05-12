@@ -21,7 +21,7 @@ void save_context(struct StackFrame *frame, struct cpu_context_t *ctx)
 {
     ctx->frame = *frame;
 }
-volatile void switch_task(struct StackFrame *frame)
+void switch_task(struct StackFrame *frame)
 {
     if (current_thread != NULL)
     {
@@ -29,12 +29,12 @@ volatile void switch_task(struct StackFrame *frame)
         if (current_thread->next)
         {
             
-            if (current_thread->context->frame.cs == 0x40 | (3))
+            if (current_thread->context->frame.cs == (0x40 | (3)))
             {
                 
                 uint64_t kernel_gs_base = 0;
                 readmsr(0xC0000101, &kernel_gs_base);
-                current_thread->gs_base = kernel_gs_base;
+                current_thread->gs_base = (struct per_thread_cpu_info_t*)kernel_gs_base;
                 uint64_t fs = 0;
                 readmsr(0xC0000100, &fs);;
                 current_thread->fs = fs;
@@ -47,11 +47,11 @@ volatile void switch_task(struct StackFrame *frame)
         {
             if (start_of_queue != NULL)
             {
-                if (current_thread->context->frame.cs == 0x40 | (3))
+                if (current_thread->context->frame.cs == (0x40 | (3)))
                 {
                     uint64_t kernel_gs_base = 0;
                     readmsr(0xC0000101, &kernel_gs_base);
-                    current_thread->gs_base = kernel_gs_base;
+                    current_thread->gs_base = (struct per_thread_cpu_info_t*)kernel_gs_base;
                     uint64_t fs = 0;
                     readmsr(0xC0000100, &fs);;
                     current_thread->fs = fs;
@@ -67,7 +67,7 @@ volatile void switch_task(struct StackFrame *frame)
             }
         }
         switch_context(frame, current_thread->context);
-        if (current_thread->context->frame.cs == 0x40 | (3))
+        if (current_thread->context->frame.cs == (0x40 | (3)))
         {
             writemsr(0xC0000101, (uint64_t)current_thread->gs_base);
             writemsr(0xC0000100, current_thread->fs);
@@ -81,7 +81,7 @@ volatile void switch_task(struct StackFrame *frame)
             current_thread = start_of_queue;
             
             switch_context(frame, current_thread->context);
-            if (current_thread->context->frame.cs == 0x40 | (3))
+            if (current_thread->context->frame.cs == (0x40 | (3)))
             {
                 writemsr(0xC0000101, (uint64_t)current_thread->gs_base);
                 writemsr(0xC0000100, current_thread->fs);
@@ -195,7 +195,7 @@ void sched_init()
 {
     // uint64_t *new_poop = (uint64_t)(((uint64_t)pmm_alloc_singlep() + hhdm_request.response->offset) + 4096);
     struct process_info *e = make_process_info("Keyboard clearer thing", 0);
-    uint64_t *new_kstack = (uint64_t)(((uint64_t)pmm_alloc_singlep() + hhdm_request.response->offset) + 4096); // CAUSE STACK GROWS DOWNWARDS
+    uint64_t *new_kstack = (uint64_t*)((uint64_t)(((uint64_t)pmm_alloc_singlep() + hhdm_request.response->offset) + 4096)); // CAUSE STACK GROWS DOWNWARDS
     struct cpu_context_t *ctx = new_context((uint64_t)kthread_start, (uint64_t)new_kstack, false);
     // struct cpu_context_t *timeforpoop = new_context((uint64_t)kthread_poop, (uint64_t)new_poop, pml4, false);
     // serial_print("Created New CPU Context for Kernel Thread\n");
@@ -214,7 +214,7 @@ void sched_init()
     }
     struct pagemap *for_elf = new_pagemap();
     kprintf("Addr of file data from found vnode: %p\n", ((struct tmpfs_node*)pro->data)->data);
-    struct thread_t *fr = load_elf_program(for_elf, 0, pro, 0, NULL, NULL, NULL, NULL, NULL, NULL);
+    struct thread_t *fr = load_elf_program(for_elf, 0, pro, 0, 0, 0, 0, 0, 0, 0);
     if (fr)
     {
         fr->next = start_of_queue;

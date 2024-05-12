@@ -4,6 +4,7 @@
 #include <pmm.h>
 #include <stdint.h>
 #include <vmm.h>
+#include <lib/kpanic.h>
 
 void (*syscall_handlers[332])(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr);
 
@@ -14,7 +15,7 @@ void RegisterSyscall(int syscall, void (*func)(struct syscall_frame *frame, stru
 
 void syscall_log_mlibc(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr)
 {
-    char *msg = frame->rsi;
+    char *msg = (char*)frame->rsi;
     kprintf("userland: %s\n", msg);
     if (strcmp(msg, "MLIBC PANIC\n") == 0)
     {
@@ -24,7 +25,7 @@ void syscall_log_mlibc(struct syscall_frame *frame, struct per_thread_cpu_info_t
 
 void syscall_mmap(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr)
 {
-    void *hint = frame->rsi;
+    void *hint = (void*)frame->rsi;
     size_t size = frame->rdx;
     uint64_t stuff = frame->r10;
     int flags = stuff & 0xFFFFFFFF;
@@ -44,7 +45,7 @@ void syscall_mmap(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr
             }
             else {
                 void *memory = vmm_region_alloc_user(map, size, NYA_OS_VMM_PRESENT | NYA_OS_VMM_USER | NYA_OS_VMM_RW);
-                frame->rax = memory;
+                frame->rax = (uint64_t)memory;
                 frame->rdx = 0;
                 return;
             }

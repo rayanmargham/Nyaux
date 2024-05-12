@@ -218,7 +218,7 @@ char *strcpy(char *to, const char *from)
 {
 	char *save = to;
 
-	for (; *to = *from; ++from, ++to);
+	for (; (*to = *from); ++from, ++to);
 	return(save);
 }
 void write_color(struct flanterm_context *ctx, char *buf, int type)
@@ -322,7 +322,7 @@ void _start(void) {
     // Fetch the first framebuffer.
     
     struct limine_framebuffer *framebuffer = framebuffer_request.response->framebuffers[0];
-    volatile uint32_t *fb = framebuffer->address;
+    // volatile uint32_t *fb = framebuffer->address;
     init_gdt();
     ctx = flanterm_fb_init(NULL, NULL, framebuffer->address, framebuffer->width, framebuffer->height, framebuffer->pitch, framebuffer->red_mask_size, framebuffer->red_mask_shift, framebuffer->green_mask_size, framebuffer->green_mask_shift, framebuffer->blue_mask_size, framebuffer->blue_mask_shift, NULL, NULL, NULL, &bg, NULL, NULL, NULL, NULL, 0, 0, 1, 0, 0, 0);
     write(ctx, "Nya Kernel Loading...\n");
@@ -342,7 +342,7 @@ void _start(void) {
     parse_tar_and_populate_tmpfs(module_request.response->modules[0]);
     uint64_t syscall = 0;
     readmsr(0xC0000080, &syscall);
-    kprintf("syscall msr : %p\n", syscall);
+    kprintf("syscall msr : %p\n",(void*)syscall);
     kprintf("Enabling syscall extention...\n");
     syscall |= 1;
     writemsr(0xC0000080, syscall);
@@ -351,17 +351,17 @@ void _start(void) {
     star |= ((uint64_t)0x28 << 32); // kernel cs, not segment selector but offset in gdt
     star |= ((uint64_t)0x30 << 48); // user cs, same thing
     writemsr(0xC0000081, star);
-    writemsr(0xC0000082, syscall_handler);
+    writemsr(0xC0000082, (uint64_t)syscall_handler);
     writemsr(0xC0000084, (1 << 9));
-    kprintf("Star MSR %p\n", star);
+    kprintf("Star MSR %p\n", (void*)star);
     syscall_init();
     ts.rsp0 = (uint64_t)(((uint64_t)pmm_alloc_singlep() + hhdm_request.response->offset) + 4096);
-    kprintf("rsp0: %p\n", ts.rsp0);
-    uint64_t cr0 = read_cr0();
+    kprintf("rsp0: %p\n", (void*)ts.rsp0);
+    uint64_t cr0 = (uint64_t)read_cr0();
     cr0 |= (1 << 1);
     cr0 = cr0 & ~(0 << 2);
     update_cr0(cr0);
-    uint64_t cr4 = read_cr4();
+    uint64_t cr4 = (uint64_t)read_cr4();
     cr4 |= (1 << 9);
     cr4 |= (1 << 10);
     update_cr4(cr4);

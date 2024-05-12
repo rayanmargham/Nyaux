@@ -39,7 +39,7 @@ struct thread_t
     struct per_thread_cpu_info_t *gs_base;
     size_t parameter_window_size;
 };
-volatile void switch_task(struct StackFrame *frame);
+void switch_task(struct StackFrame *frame);
 struct process_info *get_cur_process_info();
 void sched_init();
 struct process_info *make_process_info(char *name, int pid);

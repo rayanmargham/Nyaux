@@ -12,6 +12,7 @@ volatile struct limine_hhdm_request hhdm_request = {
     .revision = 1
 };
 struct pmm_node *head;
+void init_slabs();
 void pmm_init()
 {
     struct pmm_node *prev_node = NULL;
@@ -254,7 +255,7 @@ void kfree(void *addr, size_t size)
         }
         else
         {
-            vmm_region_dealloc(addr);
+            vmm_region_dealloc((uint64_t)addr);
         }
     }
 }
@@ -266,7 +267,7 @@ void *kmalloc(size_t size)
         if (ca == NULL)
         {
             serial_print("COUDNLT FIND FOR THIS SIZE BOZO!\n");
-            return;
+            return NULL;
         }
         if (ca->size < size)
         {
