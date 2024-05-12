@@ -23,7 +23,7 @@ uint64_t *read_cr3()
 {
     uint64_t cr4;
     __asm__ volatile ("mov %%cr4, %0" : "=r"(cr4) :: "memory");
-    return cr4;
+    return (uint64_t*)cr4;
 }
 void update_cr4(uint64_t cr4_value)
 {
@@ -33,7 +33,7 @@ uint64_t *read_cr4()
 {
     uint64_t cr4;
     __asm__ volatile ("mov %%cr4, %0" : "=r"(cr4) :: "memory");
-    return cr4;
+    return (uint64_t*)cr4;
 }
 void update_cr0(uint64_t cr0_value)
 {
@@ -43,7 +43,7 @@ uint64_t *read_cr0()
 {
     uint64_t cr0;
     __asm__ volatile ("mov %%cr0, %0" : "=r"(cr0) :: "memory");
-    return cr0;
+    return (uint64_t*)cr0;
 }
 uint64_t align_down(uint64_t addr, size_t page_size)
 {
@@ -63,16 +63,16 @@ uint64_t *get_next_table(uint64_t *table, uint64_t index, uint8_t flags)
     if ((table[index] & NYA_OS_VMM_PRESENT) == 0)
     {
         uint64_t *new_table = pmm_alloc_singlep();
-        memset((uint64_t)new_table + hhdm_request.response->offset, 0, 4096);
+        memset((uint64_t*)((uint64_t)new_table + hhdm_request.response->offset), 0, 4096);
         uint64_t entry = 0;
         entry = (uint64_t)new_table;
         entry = entry | flags;
         table[index] = entry;
-        return (table[index] & 0x000FFFFFFFFFF000);
+        return (uint64_t*)(table[index] & 0x000FFFFFFFFFF000);
     }
     else
     {
-        return (table[index] & 0x000FFFFFFFFFF000);
+        return (uint64_t*)(table[index] & 0x000FFFFFFFFFF000);
     }
 }
 
@@ -85,8 +85,8 @@ void map(uint64_t *pml4, uint64_t virt, uint64_t phys, uint8_t flags)
 
     uint64_t *cur_table = pml4;
     cur_table = get_next_table(pml4, lvl4_index, flags);
-    cur_table = get_next_table((uint64_t)cur_table + hhdm_request.response->offset, lvl3_index, flags);
-    cur_table = get_next_table((uint64_t)cur_table + hhdm_request.response->offset, lvl2_index, flags);
+    cur_table = get_next_table((uint64_t*)((uint64_t)cur_table + hhdm_request.response->offset), lvl3_index, flags);
+    cur_table = get_next_table((uint64_t*)((uint64_t)cur_table + hhdm_request.response->offset), lvl2_index, flags);
 
     uint64_t entry = 0;
     entry = phys;
@@ -101,7 +101,7 @@ uint64_t *get_next_table_unmap(uint64_t *table, uint64_t index)
         if ((table[index] & NYA_OS_VMM_PRESENT) == 1)
         {
             // EXISTS
-            return (table[index] & 0x000FFFFFFFFFF000);
+            return (uint64_t*)(table[index] & 0x000FFFFFFFFFF000);
         }
         else
         {
@@ -127,16 +127,16 @@ uint64_t virt_to_phys(uint64_t *pml4, uint64_t virt)
     {
         return 0;
     }
-    cur_table = get_next_table_unmap((uint64_t)cur_table + hhdm_request.response->offset, lvl3_index);
+    cur_table = get_next_table_unmap((uint64_t*)((uint64_t)cur_table + hhdm_request.response->offset), lvl3_index);
     if (cur_table == NULL)
     {
         return 0;
     }
-    cur_table = get_next_table_unmap((uint64_t)cur_table + hhdm_request.response->offset, lvl2_index);
+    cur_table = get_next_table_unmap((uint64_t*)((uint64_t)cur_table + hhdm_request.response->offset), lvl2_index);
 
     if (cur_table != NULL)
     {
-        if (((uint64_t*)((uint64_t)cur_table + hhdm_request.response->offset))[lvl1_index] != NULL)
+        if (((uint64_t*)((uint64_t)cur_table + hhdm_request.response->offset))[lvl1_index] != 0)
         {
             old = ((uint64_t*)((uint64_t)cur_table + hhdm_request.response->offset))[lvl1_index];
         }
@@ -158,16 +158,16 @@ uint64_t unmap(uint64_t *pml4, uint64_t virt)
     {
         return 0;
     }
-    cur_table = get_next_table_unmap((uint64_t)cur_table + hhdm_request.response->offset, lvl3_index);
+    cur_table = get_next_table_unmap((uint64_t*)((uint64_t)cur_table + hhdm_request.response->offset), lvl3_index);
     if (cur_table == NULL)
     {
         return 0;
     }
-    cur_table = get_next_table_unmap((uint64_t)cur_table + hhdm_request.response->offset, lvl2_index);
+    cur_table = get_next_table_unmap((uint64_t*)((uint64_t)cur_table + hhdm_request.response->offset), lvl2_index);
 
     if (cur_table != NULL)
     {
-        if (((uint64_t*)((uint64_t)cur_table + hhdm_request.response->offset))[lvl1_index] != NULL)
+        if (((uint64_t*)((uint64_t)cur_table + hhdm_request.response->offset))[lvl1_index] != 0)
         {
             old = ((uint64_t*)((uint64_t)cur_table + hhdm_request.response->offset))[lvl1_index];
         }
@@ -185,9 +185,9 @@ void *mmap_range(struct pagemap *user_map, uint64_t base_virt, uint64_t size_in_
     {
         void *page = pmm_alloc_singlep();
         memset(page + hhdm_request.response->offset, 0, 4096);
-        map((uint64_t)user_map->pml4 + hhdm_request.response->offset, base_virt + (i * 0x1000), page, flags);
+        map((uint64_t*)((uint64_t)user_map->pml4 + hhdm_request.response->offset), base_virt + (i * 0x1000), (uint64_t)page, flags);
     }
-    return base_virt;
+    return (void*)base_virt;
 }
 void *vmm_region_alloc_user(struct pagemap *user_map, uint64_t size, uint8_t flags)
 {
@@ -217,10 +217,10 @@ void *vmm_region_alloc_user(struct pagemap *user_map, uint64_t size, uint8_t fla
                 void *page = pmm_alloc_singlep();
                 // memzero that shit!
                 memset(page + hhdm_request.response->offset, 0, 4096);
-                map((uint64_t)user_map->pml4 + hhdm_request.response->offset, new_guy->base + (i * 0x1000), page, flags);
+                map((uint64_t*)((uint64_t)user_map->pml4 + hhdm_request.response->offset), new_guy->base + (i * 0x1000), (uint64_t)page, flags);
             }
             
-            return new_guy->base;
+            return (void*)new_guy->base;
 
         }
         else
@@ -256,8 +256,8 @@ void vmm_region_dealloc_user(struct pagemap *user_map, uint64_t base)
             int num_of_pages = cur_node->length / 4096; // assumed to be page aligned
             for (int i = 0; i < num_of_pages; i++)
             {
-                uint64_t phys = unmap((uint64_t)user_map->pml4 + hhdm_request.response->offset, cur_node->base + (i * 0x1000));
-                pmm_free_singlep((uint64_t)get_phys_from_entry(phys) + hhdm_request.response->offset);
+                uint64_t phys = unmap((uint64_t*)((uint64_t)user_map->pml4 + hhdm_request.response->offset), cur_node->base + (i * 0x1000));
+                pmm_free_singlep((void*)((uint64_t)get_phys_from_entry(phys) + hhdm_request.response->offset));
             }
             free(cur_node);
             return;
@@ -304,10 +304,10 @@ void *vmm_region_alloc(uint64_t size, uint8_t flags)
                 void *page = pmm_alloc_singlep();
                 // memzero that shit!
                 memset(page + hhdm_request.response->offset, 0, 4096);
-                map((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset, new_guy->base + (i * 0x1000), page, flags);
+                map((uint64_t*)((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset), new_guy->base + (i * 0x1000), (uint64_t)page, flags);
             }
             
-            return new_guy->base;
+            return (void*)new_guy->base;
 
         }
         else
@@ -343,8 +343,8 @@ void vmm_region_dealloc(uint64_t base)
             int num_of_pages = cur_node->length / 4096; // assumed to be page aligned
             for (int i = 0; i < num_of_pages; i++)
             {
-                uint64_t phys = unmap((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset, cur_node->base + (i * 0x1000));
-                pmm_free_singlep((uint64_t)get_phys_from_entry(phys) + hhdm_request.response->offset);
+                uint64_t phys = unmap((uint64_t*)((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset), cur_node->base + (i * 0x1000));
+                pmm_free_singlep((void*)((uint64_t)get_phys_from_entry(phys) + hhdm_request.response->offset));
             }
             free(cur_node);
             return;
@@ -391,8 +391,8 @@ void vmm_region_setup(uint64_t hhdm_pages)
     
     struct vmm_region *kernel_region = kmalloc(sizeof(struct vmm_region));
     kernel_region->base = addr_request.response->virtual_base;
-    kernel_region->length = THE_REAL;
-    kerneL_higher_half_size = addr_request.response->virtual_base + THE_REAL;
+    kernel_region->length = (uint64_t)THE_REAL;
+    kerneL_higher_half_size = addr_request.response->virtual_base + (uint64_t)THE_REAL;
 
     node->next = kernel_region;
 
@@ -424,23 +424,22 @@ struct pagemap *new_pagemap()
 }
 void vmm_init()
 {
-    char shit[64];
     size_t kernel_size_in_bytes = (size_t)THE_REAL;
     kernel_size_in_bytes = align_up(kernel_size_in_bytes, 4096);
     kernel_pagemap.pml4 = pmm_alloc_singlep();
-    memset(((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset), 0, 4096);
+    memset((void*)((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset), 0, 4096);
     uint64_t *limine_pagemap = read_cr3();
-    limine_pagemap = (uint64_t)limine_pagemap & ~0xFFF;
+    limine_pagemap = (uint64_t*)((uint64_t)limine_pagemap & ~0xFFF);
     // for (int i = 256; i < 512; i++)
     // {
     //     ((uint64_t*)((uint64_t)pml4 + hhdm_request.response->offset))[i] =  ((uint64_t*)((uint64_t)limine_pagemap + hhdm_request.response->offset))[i];
     // }
     for (uint64_t i = 0; i < kernel_size_in_bytes; i += 0x1000)
     {
-        map((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset, (addr_request.response->virtual_base + i), (addr_request.response->physical_base + i), NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW);
+        map((uint64_t*)((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset), (addr_request.response->virtual_base + i), (addr_request.response->physical_base + i), NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW);
     }
     uint64_t hhdm_pages = 0;
-    for (int i = 0; i < memmap_request.response->entry_count; i++)
+    for (uint64_t i = 0; i < memmap_request.response->entry_count; i++)
     {
         switch(memmap_request.response->entries[i]->type)
         {
@@ -448,7 +447,7 @@ void vmm_init()
                 
                 for (uint64_t j = 0; j < memmap_request.response->entries[i]->length; j += 0x1000)
                 {
-                    map((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset, (hhdm_request.response->offset + (memmap_request.response->entries[i]->base + j)), memmap_request.response->entries[i]->base + j, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW);
+                    map((uint64_t*)((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset), (hhdm_request.response->offset + (memmap_request.response->entries[i]->base + j)), memmap_request.response->entries[i]->base + j, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW);
                     if (j < 0x100000000)
                     {
                         hhdm_pages += 0x1000;
@@ -458,7 +457,7 @@ void vmm_init()
             case LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE:
                 for (uint64_t j = 0; j < memmap_request.response->entries[i]->length; j += 0x1000)
                 {
-                    map((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset, (hhdm_request.response->offset + (memmap_request.response->entries[i]->base + j)), memmap_request.response->entries[i]->base + j, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW);
+                    map((uint64_t*)((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset), (hhdm_request.response->offset + (memmap_request.response->entries[i]->base + j)), memmap_request.response->entries[i]->base + j, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW);
                     if (j < 0x100000000)
                     {
                         hhdm_pages += 0x1000;
@@ -468,7 +467,7 @@ void vmm_init()
             case LIMINE_MEMMAP_KERNEL_AND_MODULES:
                 for (uint64_t j = 0; j < align_up(memmap_request.response->entries[i]->length, 4096); j += 0x1000)
                 {
-                    map((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset, (hhdm_request.response->offset + (memmap_request.response->entries[i]->base + j)), memmap_request.response->entries[i]->base + j, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW);
+                    map((uint64_t*)((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset), (hhdm_request.response->offset + (memmap_request.response->entries[i]->base + j)), memmap_request.response->entries[i]->base + j, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW);
                     if (j < 0x100000000)
                     {
                         hhdm_pages += 0x1000;
@@ -478,7 +477,7 @@ void vmm_init()
             case LIMINE_MEMMAP_RESERVED:
                 for (uint64_t j = 0; j < align_up(memmap_request.response->entries[i]->length, 4096); j += 0x1000)
                 {
-                    map((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset, (hhdm_request.response->offset + (memmap_request.response->entries[i]->base + j)), memmap_request.response->entries[i]->base + j, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW);
+                    map((uint64_t*)((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset), (hhdm_request.response->offset + (memmap_request.response->entries[i]->base + j)), memmap_request.response->entries[i]->base + j, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW);
                     if (j < 0x100000000)
                     {
                         hhdm_pages += 0x1000;
@@ -488,7 +487,7 @@ void vmm_init()
             case LIMINE_MEMMAP_FRAMEBUFFER:
                 for (uint64_t j = 0; j < align_up(memmap_request.response->entries[i]->length, 4096); j += 0x1000)
                 {
-                    map((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset, (hhdm_request.response->offset + (memmap_request.response->entries[i]->base + j)), memmap_request.response->entries[i]->base + j, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW);
+                    map((uint64_t*)((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset), (hhdm_request.response->offset + (memmap_request.response->entries[i]->base + j)), memmap_request.response->entries[i]->base + j, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW);
                     if (j < 0x100000000)
                     {
                         hhdm_pages += 0x1000;
@@ -498,7 +497,7 @@ void vmm_init()
             case LIMINE_MEMMAP_ACPI_NVS:
                 for (uint64_t j = 0; j < align_up(memmap_request.response->entries[i]->length, 4096); j += 0x1000)
                 {
-                    map((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset, (hhdm_request.response->offset + (memmap_request.response->entries[i]->base + j)), memmap_request.response->entries[i]->base + j, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW);
+                    map((uint64_t*)((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset), (hhdm_request.response->offset + (memmap_request.response->entries[i]->base + j)), memmap_request.response->entries[i]->base + j, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW);
                     if (j < 0x100000000)
                     {
                         hhdm_pages += 0x1000;
@@ -508,7 +507,7 @@ void vmm_init()
             case LIMINE_MEMMAP_ACPI_RECLAIMABLE:
                 for (uint64_t j = 0; j < align_up(memmap_request.response->entries[i]->length, 4096); j += 0x1000)
                 {
-                    map((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset, (hhdm_request.response->offset + (memmap_request.response->entries[i]->base + j)), memmap_request.response->entries[i]->base + j, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW);
+                    map((uint64_t*)((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset), (hhdm_request.response->offset + (memmap_request.response->entries[i]->base + j)), memmap_request.response->entries[i]->base + j, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW);
                     if (j < 0x100000000)
                     {
                         hhdm_pages += 0x1000;
@@ -524,10 +523,10 @@ void vmm_init()
     }
     for (uint64_t i = 0; i < 0x100000000; i += 0x1000)
     {
-        map((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset, (hhdm_request.response->offset + i), i, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW);
+        map((uint64_t*)((uint64_t)kernel_pagemap.pml4 + hhdm_request.response->offset), (hhdm_request.response->offset + i), i, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW);
         hhdm_pages += 0x1000;
     }
-    update_cr3(kernel_pagemap.pml4);
+    update_cr3((uint64_t)kernel_pagemap.pml4);
     write_color(ctx, "VMM Initialized!\n", 1);
     vmm_region_setup(hhdm_pages);
 }
