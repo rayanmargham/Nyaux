@@ -132,8 +132,9 @@ void syscall_read(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr
             int hm = d->ptr->ops->v_rdwr(d->ptr, size_of_buf, d->offset, buf, 0);
             if (hm != -1)
             {
-                kprintf("hm is %d\n", hm);
+                kprintf("old offset is %d ", d->offset);
                 d->offset += hm;
+                kprintf("new offset is %d\n", d->offset);
                 frame->rdx = 0;
                 return;
             }
