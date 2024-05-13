@@ -194,7 +194,14 @@ void kthread_start()
 }
 struct process_info *get_cur_process_info()
 {
-    return current_thread->info;
+    if (current_thread)
+    {
+        return current_thread->info;
+    }
+    else {
+        return NULL;
+    }
+    
 }
 struct pagemap *get_current_pagemap_process()
 {

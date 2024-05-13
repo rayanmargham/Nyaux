@@ -16,7 +16,6 @@ struct thread_t *load_elf_program(struct pagemap *maps, uint64_t base, struct vn
     file->ops->v_rdwr(file, sizeof(hdr), 0, &hdr, 0);
     if (hdr.e_type == 2 || hdr.e_type == 3 || hdr.e_ident[7] == 0x00) // EXECUTABLE OR DYNAMIC, MAKE SUER SYSV
     {
-        kprintf("IS SYSV ELF WE ROLL :SUNGLASSES\n");
         uint64_t stored;
         bool interp = false;
         char path[128];
@@ -24,14 +23,10 @@ struct thread_t *load_elf_program(struct pagemap *maps, uint64_t base, struct vn
         {
             Elf64_phdr phdr = {};
             file->ops->v_rdwr(file, sizeof(phdr), hdr.e_phoff + (i * hdr.e_phentsize), &phdr, 0);
-            kprintf("Program Header: Type: %d\n", phdr.p_type);
-            kprintf("Wants to be loaded at virtual address: %p\n", phdr.p_vaddr);
             switch (phdr.p_type) {
                 case 1:
-                    kprintf("Difference: %d\n", phdr.p_memsz - phdr.p_filesz);
                     int misaligned = phdr.p_vaddr & 4095;
                     int amount_of_pages = (align_up(phdr.p_memsz + misaligned, 4096)) / 4096;
-                    kprintf("Amount of pages to be allocated for this program header: %d\n", amount_of_pages);
                     for (int i = 0; i < amount_of_pages; i++)
                     {
                         void *page = pmm_alloc_singlep();
@@ -57,8 +52,6 @@ struct thread_t *load_elf_program(struct pagemap *maps, uint64_t base, struct vn
         }
         if (interp == true)
         {
-            kprintf("Going in\n");
-            kprintf("Giving %p and pushing p\n", stored);
             return load_elf_program(maps, 0x40000000, vnode_path_lookup(root->list, path, false, NULL), argc, argv, envp, base + hdr.e_entry, stored, hdr.e_phentsize, hdr.e_phnum);
         }
         mmap_range(maps, NEW_THREAD_STACK, 512000, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW | NYA_OS_VMM_USER);
@@ -129,14 +122,13 @@ struct thread_t *load_elf_program(struct pagemap *maps, uint64_t base, struct vn
         
         if (new_guy->parameter_window_size % 16 != 0)
         {
-            kprintf("ALIGNED DE STACK\n");
             uint64_t old_parameter_size = new_guy->parameter_window_size;
             new_guy->parameter_window_size += 16 - new_guy->parameter_window_size % 16;
             memmove(new_guy->gs_base->user_stack_ptr - new_guy->parameter_window_size, new_guy->gs_base->user_stack_ptr - old_parameter_size, old_parameter_size);
         }
         new_guy->gs_base->user_stack_ptr -= new_guy->parameter_window_size;
         new_guy->context->frame.rsp -= new_guy->parameter_window_size;
-        kprintf("%p\n", new_guy->gs_base->user_stack_ptr);
+        kprintf("elf: usrptr for new thread: %p\n", new_guy->gs_base->user_stack_ptr);
         new_guy->gs_base->ptr = new_guy->gs_base;
         e->pagemap = maps;
         return new_guy;

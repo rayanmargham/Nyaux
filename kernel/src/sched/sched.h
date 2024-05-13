@@ -20,6 +20,11 @@ struct per_thread_cpu_info_t
     // WE GET THIS STRUCT BY DOING SWAPGS
     // THAT PUTS IT IN THE KERNELGSBASE MSR FOR US TO READ FROM, WE CAN THEN USE THAT TO FUCKIN LOAD THE KERNEL STACK INTO RSP
 };
+struct FileDescriptor
+{
+    struct vnode *ptr;
+    uint64_t offset;
+};
 struct process_info
 {
     // PER PROCESS INFO
@@ -28,6 +33,8 @@ struct process_info
     struct vnode *cur_working_directory;
     char name[32]; // PROCESS NAME
     uint64_t pid;
+    struct FileDescriptor Descriptors[256];
+    uint8_t descriptor_bitmap[256];
 };
 struct thread_t
 {

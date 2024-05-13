@@ -1,4 +1,6 @@
 #include "syscall.h"
+#include "ACPI/acpi.h"
+#include "fs/vfs.h"
 #include "sched/sched.h"
 #include <main.h>
 #include <pmm.h>
@@ -32,12 +34,9 @@ void syscall_mmap(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr
     int proto = (stuff >> 32) & 0xFFFFFFFF;
     size_t fd = frame->r8;
     size_t offset = frame->r9;
-    kprintf("Size it wanted to map and allocate: %d, flags: %d\n", size, flags);
-    switch (flags)
+    if (flags == MAP_ANONYMOUS)
     {
-        case MAP_ANONYMOUS:
-            kprintf("Size in pages for what it wanted: %d\n", align_up(size, 4096) / 4096);
-            struct pagemap *map = get_current_pagemap_process();
+        struct pagemap *map = get_current_pagemap_process();
             if (!map)
             {
                 frame->rdx = -1;
@@ -49,17 +48,168 @@ void syscall_mmap(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr
                 frame->rdx = 0;
                 return;
             }
+    }
+    else if (flags == (MAP_ANONYMOUS | MAP_FIXED) || flags == (MAP_ANONYMOUS | MAP_FIXED | MAP_PRIVATE))
+    {
+        struct pagemap *map = get_current_pagemap_process();
+            if (!map)
+            {
+                frame->rdx = -1;
+                return;
+            }
+            else {
+                void *memory = mmap_range(map, (uint64_t)hint, size, NYA_OS_VMM_PRESENT | NYA_OS_VMM_USER | NYA_OS_VMM_USER | NYA_OS_VMM_RW);
+                frame->rax = (uint64_t)memory;
+                frame->rdx = 0;
+                return;
+            }
+    }
+    frame->rdx = -1;
+}
+void syscall_openat(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr)
+{
+    int dirfd = frame->rsi;
+    char *pathname = (char*)frame->rdx;
+    kprintf("Path he wanted: %s\n", pathname);
+    switch (dirfd)
+    {
+        case -100:
+            struct process_info *process = get_cur_process_info();
+            struct vnode *ptr = vnode_path_lookup(process->cur_working_directory, pathname, false, NULL);
             
+            if (ptr)
+            {
+                if (ptr->type == NYAVNODE_DIR)
+                {
+                    kprintf("The actual fuck\n");
+                }
+                int fd = allocate_fd_from_bitmap(process->descriptor_bitmap, 256);
+                process->Descriptors[fd].ptr = ptr;
+                process->Descriptors[fd].offset = 0;
+                frame->rax = fd;
+                frame->rdx = 0;
+                return;
+            }
+            else {
+                frame->rdx = -1;
+                kprintf("Couldn't find this path\n");
+                return;
+            }
             break;
         default:
+            kpanic("STUB!\n", NULL);
             frame->rdx = -1;
             return;
             break;
     }
+}
+void syscall_read(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr)
+{
+    int fd = frame->rsi;
+    void *buf = (void*)frame->rdx;
+    size_t size_of_buf = frame->r10;
+    struct process_info *pro = get_cur_process_info();
+    struct FileDescriptor *d = &pro->Descriptors[fd];
+    if (d)
+    {
+        if (d->ptr)
+        {
+            kprintf("Buf: %p Offset: %d, fd: %d\n", buf, d->offset, fd);
+            kprintf("Addr of vnode: %p\n", d->ptr);
+            d->ptr->ops->v_rdwr(d->ptr, size_of_buf, d->offset, buf, 0);
+            return;
+        }
+        else {
+            kprintf("Clearly exists\n");
+            frame->rdx = -1;
+            return;
+        }
+    }
     frame->rdx = -1;
+    return;
+}
+void syscall_close(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr)
+{
+    int fd = frame->rsi;
+    struct process_info *pro = get_cur_process_info();
+    struct FileDescriptor *d = &pro->Descriptors[fd];
+    deallocate_fd_from_bitmap(pro->descriptor_bitmap, fd);
+    d->ptr = NULL;
+    d->offset = 0;
+    frame->rdx = 0;
+    return;
+}
+void syscall_seek(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr)
+{
+    int fd = frame->rsi;
+    int offset = frame->rdx;
+    int flag = frame->r10;
+    struct process_info *pro = get_cur_process_info();
+    struct FileDescriptor *d = &pro->Descriptors[fd];
+    switch (flag)
+    {
+        case 0:
+            if (d)
+            {
+                d->offset = offset;
+                frame->rdx = 0;
+                frame->rax = d->offset;
+                return;
+            }
+            else 
+            {
+                frame->rdx = -1;
+                return;
+            }
+            break;
+        case 1:
+            if (d)
+            {
+                d->offset = d->offset + offset;
+                frame->rdx = 0;
+                frame->rax = d->offset;
+                return;
+            }
+            else 
+            {
+                frame->rdx = -1;
+                return;
+            }
+            break;
+        case 2:
+            if (d)
+            {
+                d->offset = d->ptr->ops->v_filesz(d->ptr) + offset;
+                frame->rdx = 0;
+                frame->rax = d->offset;
+                return;
+            }
+            else 
+            {
+                frame->rdx = -1;
+                return;
+            }
+            break;
+        default:
+            kprintf("%d\n", flag);
+            kprintf("Flags are wrong?\n");
+            frame->rdx = -1;
+            return;
+            break;
+    }
+}
+void syscall_fs(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr)
+{
+    void *q = (void*)frame->rsi;
+    writemsr(0xC0000100, (uint64_t)q);
 }
 void syscall_init()
 {
     RegisterSyscall(0, syscall_log_mlibc);
     RegisterSyscall(1, syscall_mmap);
+    RegisterSyscall(2, syscall_openat);
+    RegisterSyscall(3, syscall_read);
+    RegisterSyscall(4, syscall_close);
+    RegisterSyscall(5, syscall_seek);
+    RegisterSyscall(6, syscall_fs);
 }

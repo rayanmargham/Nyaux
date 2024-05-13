@@ -215,6 +215,12 @@ int strcmp(const char *s1, const char *s2)
 			return (0);
 	return (*(const unsigned char *)s1 - *(const unsigned char *)(s2 - 1));
 }
+void prepend(char* s, const char* t)
+{
+    size_t len = strlen(t);
+    memmove(s + len, s, strlen(s) + 1);
+    memcpy(s, t, len);
+}
 char *strcpy(char *to, const char *from)
 {
 	char *save = to;
@@ -302,6 +308,7 @@ void kprintf(const char* format, ...)
 // linker script accordingly.
 void _start(void) {
     uint32_t bg = 0x000000;
+    uint32_t fg = 0xf0faf6;
     // Ensure the bootloader actually understands our base revision (see spec).
     if (LIMINE_BASE_REVISION_SUPPORTED == false) {
         hcf();
@@ -325,7 +332,7 @@ void _start(void) {
     struct limine_framebuffer *framebuffer = framebuffer_request.response->framebuffers[0];
     // volatile uint32_t *fb = framebuffer->address;
     init_gdt();
-    ctx = flanterm_fb_init(NULL, NULL, framebuffer->address, framebuffer->width, framebuffer->height, framebuffer->pitch, framebuffer->red_mask_size, framebuffer->red_mask_shift, framebuffer->green_mask_size, framebuffer->green_mask_shift, framebuffer->blue_mask_size, framebuffer->blue_mask_shift, NULL, NULL, NULL, &bg, NULL, NULL, NULL, NULL, 0, 0, 1, 0, 0, 0);
+    ctx = flanterm_fb_init(NULL, NULL, framebuffer->address, framebuffer->width, framebuffer->height, framebuffer->pitch, framebuffer->red_mask_size, framebuffer->red_mask_shift, framebuffer->green_mask_size, framebuffer->green_mask_shift, framebuffer->blue_mask_size, framebuffer->blue_mask_shift, NULL, NULL, NULL, &bg, &fg, NULL, NULL, NULL, 0, 0, 1, 0, 0, 0);
     write(ctx, "Nya Kernel Loading...\n");
     write_color(ctx, "GDT Loaded!\n", 1);
     init_serial();

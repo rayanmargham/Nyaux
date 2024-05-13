@@ -139,7 +139,17 @@ int vnode_rdwr(struct vnode *v, size_t size_of_buf, size_t offset, void *buf, in
     }
     else
     {
+        kprintf("clearly not the right vnode\n");
         return -1; // bruh bros trying to writing into a directory :skull:
     }
 }
-struct vnodeops tmpfsops = {.v_lookup = vnode_lookup, .v_mkdir = vnode_mkdir, .v_create = vnode_create, .v_rdwr = vnode_rdwr};
+size_t vnode_filesz(struct vnode *v)
+{
+    struct tmpfs_node *file = v->data;
+    if (file)
+    {
+        return file->size;
+    }
+    return 0;
+}
+struct vnodeops tmpfsops = {.v_lookup = vnode_lookup, .v_mkdir = vnode_mkdir, .v_create = vnode_create, .v_rdwr = vnode_rdwr, .v_filesz = vnode_filesz};

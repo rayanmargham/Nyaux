@@ -22,4 +22,5 @@ int strncmp(const char* a, const char* b, size_t len);
 char *strcpy(char *to, const char *from);
 void kprintf(const char* format, ...);
 void kputc(int ch, void*);
+void prepend(char* s, const char* t);
 extern struct flanterm_context *ctx;

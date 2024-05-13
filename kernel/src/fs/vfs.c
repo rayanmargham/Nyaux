@@ -3,6 +3,7 @@
 #include <drivers/serial.h>
 #include <pmm.h>
 #include <vmm.h>
+#include "sched/sched.h"
 #include "tmpfs.h"
 #include <stdbool.h>
 
@@ -31,6 +32,16 @@ struct vnode *vnode_path_lookup(struct vnode *cur, const char *path, bool getpar
     char *work_with_me = kmalloc(pathlen + 1);
     memset(work_with_me, 0, pathlen + 1);
     strcpy(work_with_me, path);
+    if (work_with_me[0] == '/')
+    {
+        if (get_cur_process_info())
+        {
+            cur_vnode = get_cur_process_info()->root_vfs;
+        }
+        else {
+            cur_vnode = root->list;
+        }
+    }
     for (int i = 0; i < pathlen; ++i)
     {
         if (work_with_me[i] == '/')
@@ -44,6 +55,7 @@ struct vnode *vnode_path_lookup(struct vnode *cur, const char *path, bool getpar
         {
             continue;
         }
+        
         struct vnode *res = NULL;
         char *component = &work_with_me[i];
         size_t len_of_comp = strlen(component);
@@ -65,8 +77,7 @@ struct vnode *vnode_path_lookup(struct vnode *cur, const char *path, bool getpar
             return cur_vnode;
         }
         cur_vnode->ops->v_lookup(cur_vnode, component, &res);
-
-
+        
         if (res)
         {
             if (res->type == NYAVNODE_DIR)
@@ -74,15 +85,29 @@ struct vnode *vnode_path_lookup(struct vnode *cur, const char *path, bool getpar
                 cur_vnode = res; // keep going down the directory
                 i += len_of_comp;
             }
+            else if (res->type == NYAVNODE_SYMLINK)
+            {
+                
+                kprintf("Symlink %s resolves to %s\n", path, ((struct tmpfs_node*)res->data)->data);
+                return vnode_path_lookup(cur_vnode, ((struct tmpfs_node*)res->data)->data, false, NULL);
+            }
             else
             {
+                if (strcmp(path, "/usr/lib/libreadline.so.8") == 0)
+        {
+            kprintf("component: %s\n", component);
+        }
                 return res; // this is a file 1000000% looool
             }
         }
         else
         {
-            strcpy(componentlast, component);
-            if (cur_vnode)
+            
+            if (componentlast)
+            {
+                strcpy(componentlast, component);
+            }
+            if (getparent)
             {
                 return cur_vnode;
             }
@@ -132,6 +157,29 @@ int vfs_create(struct vnode *indir, char *path, int type, struct vnode **res)
         return -1;
     }
 
+}
+int allocate_fd_from_bitmap(uint8_t *bitmap, size_t size)
+{
+    for (int i = 0; i < size; i++)
+    {
+        if (bitmap[i] == 0)
+        {
+            bitmap[i] = 1;
+            return i;
+        }
+        else {
+            continue;
+        }
+    }
+}
+int deallocate_fd_from_bitmap(uint8_t *bitmap, int fd)
+{
+    if (bitmap[fd] == 1)
+    {
+        bitmap[fd] = 0;
+        return 0;
+    }
+    return -1;
 }
 void test_vfs()
 {
