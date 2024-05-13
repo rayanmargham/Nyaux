@@ -32,18 +32,40 @@ index 3474615..e034881 100644
  
  char **backtrace_symbols(void *const *, int) {
 diff --git mlibc-clean/options/rtld/generic/linker.cpp mlibc-workdir/options/rtld/generic/linker.cpp
-index b5f42af..e09874a 100644
+index b5f42af..c62b59c 100644
 --- mlibc-clean/options/rtld/generic/linker.cpp
 +++ mlibc-workdir/options/rtld/generic/linker.cpp
-@@ -29,7 +29,7 @@ constexpr bool verbose = false;
- constexpr bool stillSlightlyVerbose = false;
- constexpr bool logBaseAddresses = false;
- constexpr bool logRpath = false;
+@@ -25,11 +25,11 @@ enum {
+ uintptr_t libraryBase = 0x41000000;
+ #endif
+ 
+-constexpr bool verbose = false;
+-constexpr bool stillSlightlyVerbose = false;
+-constexpr bool logBaseAddresses = false;
+-constexpr bool logRpath = false;
 -constexpr bool logLdPath = false;
++constexpr bool verbose = true;
++constexpr bool stillSlightlyVerbose = true;
++constexpr bool logBaseAddresses = true;
++constexpr bool logRpath = true;
 +constexpr bool logLdPath = true;
  constexpr bool eagerBinding = true;
  
  #if defined(__x86_64__) || defined(__i386__)
+@@ -940,8 +940,12 @@ void doInitialize(SharedObject *object) {
+ 		mlibc::infoLogger() << "rtld: Running DT_INIT_ARRAY functions" << frg::endlog;
+ 	__ensure((object->initArraySize % sizeof(InitFuncPtr)) == 0);
+ 	for(size_t i = 0; i < object->initArraySize / sizeof(InitFuncPtr); i++)
++	{
++		mlibc::infoLogger() << "rtld: function ptr is: " << (void*)object->initArray[i] << frg::endlog;
+ 		object->initArray[i]();
+-
++	}
++	
++	mlibc::infoLogger() << "rtld: Complete" << frg::endlog;
+ 	if(verbose)
+ 		mlibc::infoLogger() << "rtld: Object initialization complete" << frg::endlog;
+ 	object->wasInitialized = true;
 diff --git mlibc-clean/options/rtld/generic/main.cpp mlibc-workdir/options/rtld/generic/main.cpp
 index 360ed37..d6273d1 100644
 --- mlibc-clean/options/rtld/generic/main.cpp
