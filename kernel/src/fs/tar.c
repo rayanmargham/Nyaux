@@ -65,7 +65,6 @@ void parse_tar_and_populate_tmpfs(struct limine_file *archive)
             vfs_create(roo, hdr_ptr->name, 1, &notneeded);
             if (notneeded)
             {
-                prepend((void*)hdr_ptr + 157, "/");
                 
                 notneeded->ops->v_rdwr(notneeded, strlen((void *)hdr_ptr + 157) + 1, 0, (void *)hdr_ptr + 157, 1);
                 notneeded->type = NYAVNODE_SYMLINK;

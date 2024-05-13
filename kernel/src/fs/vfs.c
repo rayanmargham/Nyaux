@@ -77,11 +77,22 @@ struct vnode *vnode_path_lookup(struct vnode *cur, const char *path, bool getpar
             return cur_vnode;
         }
         cur_vnode->ops->v_lookup(cur_vnode, component, &res);
-        
+        if (strcmp(path, "/usr/lib/libintl.so.8") == 0)
+        {
+            kprintf("component: %s\n", component);
+            if (res)
+            {
+                kprintf("Yes\n");
+            }
+            else {
+                kprintf("no\n");
+            }
+        }
         if (res)
         {
             if (res->type == NYAVNODE_DIR)
             {
+                 
                 cur_vnode = res; // keep going down the directory
                 i += len_of_comp;
             }
@@ -93,10 +104,7 @@ struct vnode *vnode_path_lookup(struct vnode *cur, const char *path, bool getpar
             }
             else
             {
-                if (strcmp(path, "/usr/lib/libreadline.so.8") == 0)
-        {
-            kprintf("component: %s\n", component);
-        }
+               
                 return res; // this is a file 1000000% looool
             }
         }

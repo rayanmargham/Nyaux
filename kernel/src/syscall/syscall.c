@@ -1,5 +1,6 @@
 #include "syscall.h"
 #include "ACPI/acpi.h"
+#include "fs/tmpfs.h"
 #include "fs/vfs.h"
 #include "sched/sched.h"
 #include <main.h>
@@ -79,10 +80,7 @@ void syscall_openat(struct syscall_frame *frame, struct per_thread_cpu_info_t *p
             
             if (ptr)
             {
-                if (ptr->type == NYAVNODE_DIR)
-                {
-                    kprintf("The actual fuck\n");
-                }
+                
                 int fd = allocate_fd_from_bitmap(process->descriptor_bitmap, 256);
                 process->Descriptors[fd].ptr = ptr;
                 process->Descriptors[fd].offset = 0;
@@ -117,6 +115,7 @@ void syscall_read(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr
             kprintf("Buf: %p Offset: %d, fd: %d\n", buf, d->offset, fd);
             kprintf("Addr of vnode: %p\n", d->ptr);
             d->ptr->ops->v_rdwr(d->ptr, size_of_buf, d->offset, buf, 0);
+            frame->rdx = 0;
             return;
         }
         else {
