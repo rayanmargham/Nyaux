@@ -32,7 +32,7 @@ index 3474615..e034881 100644
  
  char **backtrace_symbols(void *const *, int) {
 diff --git mlibc-clean/options/rtld/generic/linker.cpp mlibc-workdir/options/rtld/generic/linker.cpp
-index b5f42af..c992b45 100644
+index b5f42af..36fdba7 100644
 --- mlibc-clean/options/rtld/generic/linker.cpp
 +++ mlibc-workdir/options/rtld/generic/linker.cpp
 @@ -25,11 +25,11 @@ enum {
@@ -50,13 +50,14 @@ index b5f42af..c992b45 100644
  constexpr bool eagerBinding = true;
  
  #if defined(__x86_64__) || defined(__i386__)
-@@ -940,8 +940,13 @@ void doInitialize(SharedObject *object) {
+@@ -940,8 +940,14 @@ void doInitialize(SharedObject *object) {
  		mlibc::infoLogger() << "rtld: Running DT_INIT_ARRAY functions" << frg::endlog;
  	__ensure((object->initArraySize % sizeof(InitFuncPtr)) == 0);
  	for(size_t i = 0; i < object->initArraySize / sizeof(InitFuncPtr); i++)
 +	{
 +		mlibc::infoLogger() << "rtld: function ptr is: " << (void*)object->initArray[i] << frg::endlog;
 +		mlibc::infoLogger() << "rtld: ptr to initarray is " << (void*)object->initArray << frg::endlog;
++		mlibc::infoLogger() << "rtld: size of initarray is " << object->initArraySize << frg::endlog;
  		object->initArray[i]();
 -
 +	}

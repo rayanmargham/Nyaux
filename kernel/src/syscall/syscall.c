@@ -129,8 +129,15 @@ void syscall_read(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr
         {
             kprintf("Buf: %p Offset: %d, fd: %d\n", buf, d->offset, fd);
             kprintf("Addr of vnode: %p\n", d->ptr);
-            d->ptr->ops->v_rdwr(d->ptr, size_of_buf, d->offset, buf, 0);
-            frame->rdx = 0;
+            int hm = d->ptr->ops->v_rdwr(d->ptr, size_of_buf, d->offset, buf, 0);
+            if (hm != -1)
+            {
+                kprintf("hm is %d\n", hm);
+                d->offset += hm;
+                frame->rdx = 0;
+                return;
+            }
+            frame->rdx = -1;
             return;
         }
         else {

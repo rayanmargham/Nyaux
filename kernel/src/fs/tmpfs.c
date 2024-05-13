@@ -106,10 +106,17 @@ int vnode_rdwr(struct vnode *v, size_t size_of_buf, size_t offset, void *buf, in
             if (file->size == 0)
             {
                 // file dont exist, failure!
-                return 0;
+                return -1;
             }
-            memcpy(buf, file->data + offset, size_of_buf);
-            return 0;
+            void *start = file->data + offset;
+            void *end = start + size_of_buf;
+            if (end > file->data + file->size)
+            {
+                end = file->data + file->size;
+            }
+            if (start > end) start = (void*)end;
+            memcpy(buf, start, end - start);
+            return end-start;;
             
         }
         else
