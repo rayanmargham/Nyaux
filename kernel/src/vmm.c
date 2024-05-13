@@ -5,9 +5,10 @@
 #include "vmm.h"
 
 extern char THE_REAL[];
-#define NYA_OS_VMM_PRESENT 1
-#define NYA_OS_VMM_RW (1 << 1)
-#define NYA_OS_VMM_USER (1 << 2)
+#define NYA_OS_VMM_PRESENT 1UL
+#define NYA_OS_VMM_RW (1UL << 1)
+#define NYA_OS_VMM_USER (1UL << 2)
+#define NYA_OS_VMM_XD (1UL << 63)
 
 struct pagemap kernel_pagemap = {};
 struct limine_kernel_address_request addr_request = 
@@ -58,7 +59,7 @@ uint64_t get_phys_from_entry(uint64_t pte)
 {
     return pte & 0x0007FFFFFFFFF000; // get bits 12-51 from the page table entry, to get the physical address
 }
-uint64_t *get_next_table(uint64_t *table, uint64_t index, uint8_t flags)
+uint64_t *get_next_table(uint64_t *table, uint64_t index, uint64_t flags)
 {
     if ((table[index] & NYA_OS_VMM_PRESENT) == 0)
     {
@@ -76,7 +77,7 @@ uint64_t *get_next_table(uint64_t *table, uint64_t index, uint8_t flags)
     }
 }
 
-void map(uint64_t *pml4, uint64_t virt, uint64_t phys, uint8_t flags)
+void map(uint64_t *pml4, uint64_t virt, uint64_t phys, uint64_t flags)
 {
     uint64_t lvl4_index = (virt >> 39) & 0x1FF;
     uint64_t lvl3_index = (virt >> 30) & 0x1FF;
@@ -177,7 +178,7 @@ uint64_t unmap(uint64_t *pml4, uint64_t virt)
     return old;
 
 }
-void *mmap_range(struct pagemap *user_map, uint64_t base_virt, uint64_t size_in_bytes, uint8_t flags)
+void *mmap_range(struct pagemap *user_map, uint64_t base_virt, uint64_t size_in_bytes, uint64_t flags)
 {
     int num_of_pages = align_up(size_in_bytes, 4096) / 4096;
     kprintf("num of pages: %d\n", num_of_pages);
@@ -189,7 +190,7 @@ void *mmap_range(struct pagemap *user_map, uint64_t base_virt, uint64_t size_in_
     }
     return (void*)base_virt;
 }
-void *vmm_region_alloc_user(struct pagemap *user_map, uint64_t size, uint8_t flags)
+void *vmm_region_alloc_user(struct pagemap *user_map, uint64_t size, uint64_t flags)
 {
     struct vmm_region *cur_node = user_map->head;
     struct vmm_region *prev_node = NULL;
@@ -277,7 +278,7 @@ void vmm_region_dealloc_user(struct pagemap *user_map, uint64_t base)
         asm ("hlt");
     }
 }
-void *vmm_region_alloc(uint64_t size, uint8_t flags)
+void *vmm_region_alloc(uint64_t size, uint64_t flags)
 {
     struct vmm_region *cur_node = kernel_pagemap.head;
     struct vmm_region *prev_node = NULL;

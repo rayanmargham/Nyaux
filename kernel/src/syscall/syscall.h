@@ -30,3 +30,7 @@ extern void syscall_handler();
 #define MAP_HUGETLB   0x40000
 #define MAP_SYNC      0x80000
 #define MAP_FIXED_NOREPLACE 0x100000
+#define PROT_NONE  0x00
+#define PROT_READ  0x01
+#define PROT_WRITE 0x02
+#define PROT_EXEC  0x04

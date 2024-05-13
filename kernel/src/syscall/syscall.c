@@ -61,10 +61,21 @@ void syscall_mmap(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr
                 return;
             }
             else {
-                void *memory = mmap_range(map, (uint64_t)hint, size, NYA_OS_VMM_PRESENT | NYA_OS_VMM_USER | NYA_OS_VMM_USER | NYA_OS_VMM_RW);
-                frame->rax = (uint64_t)memory;
-                frame->rdx = 0;
-                kprintf("syscall_mmap: gave address from base %p\n", memory);
+                if (proto & PROT_EXEC)
+                {
+                    
+                    void *memory = mmap_range(map, (uint64_t)hint, size, NYA_OS_VMM_PRESENT | NYA_OS_VMM_USER | NYA_OS_VMM_USER | NYA_OS_VMM_RW);
+                    frame->rax = (uint64_t)memory;
+                    frame->rdx = 0;
+                    kprintf("syscall_mmap: gave address from base %p\n", memory);
+                }
+                else {
+                    void *memory = mmap_range(map, (uint64_t)hint, size, NYA_OS_VMM_PRESENT | NYA_OS_VMM_USER | NYA_OS_VMM_USER | NYA_OS_VMM_RW | NYA_OS_VMM_XD);
+                    frame->rax = (uint64_t)memory;
+                    frame->rdx = 0;
+                    kprintf("syscall_mmap: gave address from base %p\n", memory);
+                }
+                
                 return;
             }
     }
@@ -184,7 +195,7 @@ void syscall_seek(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr
         case 2:
             if (d)
             {
-                d->offset = d->ptr->ops->v_filesz(d->ptr) + offset;
+                d->offset = (int)d->ptr->ops->v_filesz(d->ptr) + offset;
                 frame->rdx = 0;
                 frame->rax = d->offset;
                 return;
