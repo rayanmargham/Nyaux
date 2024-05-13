@@ -71,7 +71,6 @@ void syscall_openat(struct syscall_frame *frame, struct per_thread_cpu_info_t *p
 {
     int dirfd = frame->rsi;
     char *pathname = (char*)frame->rdx;
-    kprintf("Path he wanted: %s\n", pathname);
     switch (dirfd)
     {
         case -100:

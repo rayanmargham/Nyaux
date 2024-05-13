@@ -52,6 +52,7 @@ struct thread_t *load_elf_program(struct pagemap *maps, uint64_t base, struct vn
         }
         if (interp == true)
         {
+            kprintf("elf: entry addr %p\n", base + hdr.e_entry);
             return load_elf_program(maps, 0x40000000, vnode_path_lookup(root->list, path, false, NULL), argc, argv, envp, base + hdr.e_entry, stored, hdr.e_phentsize, hdr.e_phnum);
         }
         mmap_range(maps, NEW_THREAD_STACK, 512000, NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW | NYA_OS_VMM_USER);

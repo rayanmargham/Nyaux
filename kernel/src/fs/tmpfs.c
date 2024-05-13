@@ -109,10 +109,6 @@ int vnode_rdwr(struct vnode *v, size_t size_of_buf, size_t offset, void *buf, in
                 return 0;
             }
             memcpy(buf, file->data + offset, size_of_buf);
-            if (size_of_buf == 0x40)
-            {
-                
-            }
             return 0;
             
         }
@@ -122,7 +118,6 @@ int vnode_rdwr(struct vnode *v, size_t size_of_buf, size_t offset, void *buf, in
             struct tmpfs_node *file = v->data;
             if (file->size == 0)
             {
-                
                 file->data = kmalloc(size_of_buf + offset);
                 file->size = size_of_buf + offset;
                 
@@ -130,6 +125,7 @@ int vnode_rdwr(struct vnode *v, size_t size_of_buf, size_t offset, void *buf, in
             }
             else if (size_of_buf + offset > file->size)
             {
+                
                 file->data = krealloc(file->data, file->size, size_of_buf + offset);
                 file->size = size_of_buf + offset;
             }

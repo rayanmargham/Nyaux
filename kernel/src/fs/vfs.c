@@ -77,17 +77,6 @@ struct vnode *vnode_path_lookup(struct vnode *cur, const char *path, bool getpar
             return cur_vnode;
         }
         cur_vnode->ops->v_lookup(cur_vnode, component, &res);
-        if (strcmp(path, "/usr/lib/libintl.so.8") == 0)
-        {
-            kprintf("component: %s\n", component);
-            if (res)
-            {
-                kprintf("Yes\n");
-            }
-            else {
-                kprintf("no\n");
-            }
-        }
         if (res)
         {
             if (res->type == NYAVNODE_DIR)
