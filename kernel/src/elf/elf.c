@@ -45,7 +45,7 @@ struct thread_t *load_elf_program(struct pagemap *maps, uint64_t base, struct vn
                             cur_node = cur_node->next;
                             continue;
                         }
-                        if ((cur_node->base) > f && (prev_node->base + prev_node->length) < f)
+                        if ((cur_node->base) >= f && (prev_node->base + prev_node->length) <= f)
                         {
                             struct vmm_region *new_guy = kmalloc(sizeof(struct vmm_region));
                             new_guy->base = f;
