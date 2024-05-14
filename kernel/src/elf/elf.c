@@ -34,6 +34,37 @@ struct thread_t *load_elf_program(struct pagemap *maps, uint64_t base, struct vn
                         uint64_t virt = align_down(base + phdr.p_vaddr + (i * 0x1000), 4096);
                         map((uint64_t)maps->pml4 + hhdm_request.response->offset, virt, (uint64_t)page, NYA_OS_VMM_USER | NYA_OS_VMM_PRESENT | NYA_OS_VMM_RW);
                     }
+                    struct vmm_region *cur_node = maps->head;
+                    struct vmm_region *prev_node = NULL;
+                    uint64_t f = align_down(base + phdr.p_vaddr, 4096);
+                    while (cur_node != NULL)
+                    {
+                        if (prev_node == NULL)
+                        {
+                            prev_node = cur_node;
+                            cur_node = cur_node->next;
+                            continue;
+                        }
+                        if ((cur_node->base) > f && (prev_node->base + prev_node->length) < f)
+                        {
+                            struct vmm_region *new_guy = kmalloc(sizeof(struct vmm_region));
+                            new_guy->base = f;
+                            new_guy->length = (align_up(phdr.p_memsz + misaligned, 4096));
+                            kprintf("done\n");
+                            prev_node->next = new_guy;
+                            new_guy->next = cur_node;
+                            cur_node = cur_node->next;
+                            goto done;
+                        }
+                        else
+                        {
+                            // not enough space for our new region sadly, continue
+                            prev_node = cur_node;
+                            cur_node = cur_node->next;
+                            continue;
+                        }
+                    }
+                    done:
                     
                     file->ops->v_rdwr(file, phdr.p_filesz, phdr.p_offset, (void*)(base + phdr.p_vaddr), 0);
                     break;
