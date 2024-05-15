@@ -38,6 +38,12 @@ void syscall_write(struct syscall_frame *frame, struct per_thread_cpu_info_t *pt
         frame->rax = count;
         return;
     }
+    else if (fd == 1)
+    {
+        flanterm_write(ctx, buf, count);
+        frame->rdx = 0;
+        frame->rax = count;
+    }
     else {
         kprintf("syscall_write: failure at fd: %d\n", fd);
         frame->rdx = -1;

@@ -28,7 +28,6 @@ regenerate() {
 build() {
     autotools_configure \
         --with-curses \
-        --enable-readline \
         --without-bash-malloc \
         --with-installed-readline="${sysroot}/usr/lib"
 

@@ -128,10 +128,10 @@ index 0000000..d6e800c
 +}
 diff --git mlibc-workdir/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 new file mode 100644
-index 0000000..87c037d
+index 0000000..0d604be
 --- /dev/null
 +++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
-@@ -0,0 +1,523 @@
+@@ -0,0 +1,529 @@
 +#include <bits/ensure.h>
 +#include <mlibc/debug.hpp>
 +#include <mlibc/all-sysdeps.hpp>
@@ -197,7 +197,10 @@ index 0000000..87c037d
 +
 +int sys_kill(pid_t pid, int signal) STUB_ONLY;
 +
-+int sys_tcgetattr(int fd, struct termios *attr) STUB_ONLY;
++int sys_tcgetattr(int fd, struct termios *attr) 
++{
++	return -1;
++}
 +
 +int sys_tcsetattr(int fd, int optional_action, const struct termios *attr) STUB_ONLY;
 +
@@ -212,7 +215,10 @@ index 0000000..87c037d
 +#ifndef MLIBC_BUILDING_RTLD
 +
 +int sys_ppoll(struct pollfd *fds, int nfds, const struct timespec *timeout,
-+		const sigset_t *sigmask, int *num_events) STUB_ONLY;
++		const sigset_t *sigmask, int *num_events) 
++{
++	return ENOSYS;
++}
 +
 +int sys_poll(struct pollfd *fds, nfds_t count, int timeout, int *num_events) {
 +	struct timespec ts;
