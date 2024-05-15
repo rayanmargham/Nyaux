@@ -157,6 +157,11 @@ int vfs_create(struct vnode *indir, char *path, int type, struct vnode **res)
 }
 int allocate_fd_from_bitmap(uint8_t *bitmap, size_t size)
 {
+    if (bitmap[0] == 0 && bitmap[1] == 0)
+    {
+        bitmap[0] = 1;
+        bitmap[1] = 1;
+    }
     for (int i = 0; i < size; i++)
     {
         if (bitmap[i] == 0)

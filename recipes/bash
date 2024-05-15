@@ -28,8 +28,7 @@ regenerate() {
 build() {
     autotools_configure \
         --with-curses \
-        --without-bash-malloc \
-        --with-installed-readline="${sysroot}/usr/lib"
+        --without-bash-malloc
 
     make -j${parallelism}
 }

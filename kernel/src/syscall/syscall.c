@@ -19,7 +19,7 @@ void RegisterSyscall(int syscall, void (*func)(struct syscall_frame *frame, stru
 void syscall_log_mlibc(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr)
 {
     char *msg = (char*)frame->rsi;
-    kprintf("userland: %s\n", msg);
+    //kprintf("userland: %s\n", msg);
     if (strcmp(msg, "MLIBC PANIC\n") == 0)
     {
         kpanic("Mlibc Panicked!\n", NULL);
@@ -38,11 +38,12 @@ void syscall_write(struct syscall_frame *frame, struct per_thread_cpu_info_t *pt
         frame->rax = count;
         return;
     }
-    else if (fd == 1)
+    else if (fd == 2)
     {
         flanterm_write(ctx, buf, count);
         frame->rdx = 0;
         frame->rax = count;
+        return;
     }
     else {
         kprintf("syscall_write: failure at fd: %d\n", fd);
@@ -53,7 +54,6 @@ void syscall_write(struct syscall_frame *frame, struct per_thread_cpu_info_t *pt
 }
 void syscall_mmap(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr)
 {
-    kprintf("syscall_mmap()\n");
     void *hint = (void*)frame->rsi;
     size_t size = frame->rdx;
     uint64_t stuff = frame->r10;
@@ -73,7 +73,6 @@ void syscall_mmap(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr
                 void *memory = vmm_region_alloc_user(map, size, NYA_OS_VMM_PRESENT | NYA_OS_VMM_USER | NYA_OS_VMM_RW);
                 frame->rax = (uint64_t)memory;
                 frame->rdx = 0;
-                kprintf("syscall_mmap: gave address from base %p\n", memory);
                 return;
             }
     }
@@ -92,13 +91,11 @@ void syscall_mmap(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr
                     void *memory = mmap_range(map, (uint64_t)hint, size, NYA_OS_VMM_PRESENT | NYA_OS_VMM_USER | NYA_OS_VMM_USER | NYA_OS_VMM_RW);
                     frame->rax = (uint64_t)memory;
                     frame->rdx = 0;
-                    kprintf("syscall_mmap: gave address from base %p\n", memory);
                 }
                 else {
                     void *memory = mmap_range(map, (uint64_t)hint, size, NYA_OS_VMM_PRESENT | NYA_OS_VMM_USER | NYA_OS_VMM_USER | NYA_OS_VMM_RW | NYA_OS_VMM_XD);
                     frame->rax = (uint64_t)memory;
                     frame->rdx = 0;
-                    kprintf("syscall_mmap: gave address from base %p\n", memory);
                 }
                 
                 return;
@@ -110,7 +107,6 @@ void syscall_openat(struct syscall_frame *frame, struct per_thread_cpu_info_t *p
 {
     int dirfd = frame->rsi;
     char *pathname = (char*)frame->rdx;
-    kprintf("syscall_openat(): looking for path %s\n", pathname);
     switch (dirfd)
     {
         case -100:
@@ -121,7 +117,7 @@ void syscall_openat(struct syscall_frame *frame, struct per_thread_cpu_info_t *p
             {
                 
                 int fd = allocate_fd_from_bitmap(process->descriptor_bitmap, 256);
-                kprintf("syscall_openat: allocated fd %d\n");
+                //kprintf("syscall_openat: allocated fd %d\n", fd);
                 process->Descriptors[fd].ptr = ptr;
                 process->Descriptors[fd].offset = 0;
                 frame->rax = fd;
@@ -130,7 +126,7 @@ void syscall_openat(struct syscall_frame *frame, struct per_thread_cpu_info_t *p
             }
             else {
                 frame->rdx = -1;
-                kprintf("Couldn't find this path\n");
+                //kprintf("Couldn't find this path\n");
                 return;
             }
             break;
@@ -143,32 +139,44 @@ void syscall_openat(struct syscall_frame *frame, struct per_thread_cpu_info_t *p
 }
 void syscall_read(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr)
 {
-    kprintf("syscall_read()\n");
     int fd = frame->rsi;
     void *buf = (void*)frame->rdx;
     size_t size_of_buf = frame->r10;
+    if (fd == 0)
+    {
+        // stdin
+        if (size_of_buf > sizeof(char))
+        {
+            ((char*)buf)[0] = '\n';
+            frame->rdx = 0;
+            frame->rax = sizeof(char);
+            return;
+        }
+    }
     struct process_info *pro = get_cur_process_info();
     struct FileDescriptor *d = &pro->Descriptors[fd];
+    //kprintf("syscall_read: reading fd %d\n", fd);
     if (d)
     {
         if (d->ptr)
         {
-            kprintf("Buf: %p Offset: %d, fd: %d\n", buf, d->offset, fd);
-            kprintf("Addr of vnode: %p\n", d->ptr);
+            // kprintf("Buf: %p Offset: %d, fd: %d\n", buf, d->offset, fd);
+            // kprintf("Addr of vnode: %p\n", d->ptr);
             int hm = d->ptr->ops->v_rdwr(d->ptr, size_of_buf, d->offset, buf, 0);
             if (hm != -1)
             {
-                kprintf("old offset is %d ", d->offset);
+                // kprintf("old offset is %d ", d->offset);
                 d->offset += hm;
-                kprintf("new offset is %d\n", d->offset);
+                // kprintf("new offset is %d\n", d->offset);
                 frame->rdx = 0;
+                frame->rax = hm;
                 return;
             }
             frame->rdx = -1;
             return;
         }
         else {
-            kprintf("Clearly exists\n");
+            // kprintf("Clearly exists\n");
             frame->rdx = -1;
             return;
         }
@@ -178,7 +186,6 @@ void syscall_read(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr
 }
 void syscall_close(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr)
 {
-    kprintf("syscall_close()\n");
     int fd = frame->rsi;
     struct process_info *pro = get_cur_process_info();
     struct FileDescriptor *d = &pro->Descriptors[fd];
@@ -190,7 +197,6 @@ void syscall_close(struct syscall_frame *frame, struct per_thread_cpu_info_t *pt
 }
 void syscall_seek(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr)
 {
-    kprintf("syscall_seek()\n");
     int fd = frame->rsi;
     int offset = frame->rdx;
     int flag = frame->r10;
@@ -250,7 +256,6 @@ void syscall_seek(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr
 }
 void syscall_fs(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr)
 {
-    kprintf("syscall_fs()\n");
     void *q = (void*)frame->rsi;
     kprintf("syscall_fs(): setting fs base to %p\n", q);
     writemsr(0xC0000100, (uint64_t)q);
