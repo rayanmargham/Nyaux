@@ -128,10 +128,10 @@ index 0000000..d6e800c
 +}
 diff --git mlibc-workdir/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 new file mode 100644
-index 0000000..6d1b690
+index 0000000..87c037d
 --- /dev/null
 +++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
-@@ -0,0 +1,480 @@
+@@ -0,0 +1,523 @@
 +#include <bits/ensure.h>
 +#include <mlibc/debug.hpp>
 +#include <mlibc/all-sysdeps.hpp>
@@ -294,22 +294,25 @@ index 0000000..6d1b690
 +
 +#endif
 +
-+int sys_futex_wait(int *pointer, int expected, const struct timespec *time) STUB_ONLY;
++int sys_futex_wait(int *pointer, int expected, const struct timespec *time) 
++{
++	return 0;
++}
 +
-+int sys_futex_wake(int *pointer) STUB_ONLY;
++int sys_futex_wake(int *pointer) {
++	return 0;
++}
 +
 +#ifndef MLIBC_BUILDING_RTLD
 +
-+int sys_ioctl(int fd, unsigned long request, void *arg, int *result) STUB_ONLY;
++int sys_ioctl(int fd, unsigned long request, void *arg, int *result) 
++{
++	return ENOSYS;
++}
 +
 +int sys_isatty(int fd) {
-+	struct winsize ws;
-+	int ret;
-+
-+	if (!sys_ioctl(fd, TIOCGWINSZ, &ws, &ret))
-+		return 0;
-+
-+	return ENOTTY;
++	
++	return 0;
 +}
 +
 +int sys_getcwd(char *buffer, size_t size) STUB_ONLY;
@@ -374,7 +377,17 @@ index 0000000..6d1b690
 +
 +#ifndef MLIBC_BUILDING_RTLD
 +
-+int sys_write(int fd, const void *buf, size_t count, ssize_t *bytes_written) STUB_ONLY;
++int sys_write(int fd, const void *buf, size_t count, ssize_t *bytes_written) 
++{
++	__syscall_ret ret = __syscall(7, fd, buf, count);
++
++	if (ret.errno != 0) {
++		return ret.errno;
++	}
++
++	*bytes_written = (ssize_t)ret.ret;
++	return 0;
++}
 +
 +int sys_readlink(const char *path, void *data, size_t max_size, ssize_t *length) STUB_ONLY;
 +
@@ -420,9 +433,16 @@ index 0000000..6d1b690
 +
 +#ifndef MLIBC_BUILDING_RTLD
 +
-+pid_t sys_getpid() STUB_ONLY;
++pid_t sys_getpid() 
++{
++	// fuck u pid is always 0
++	return 0;
++}
 +
-+pid_t sys_getppid() STUB_ONLY;
++pid_t sys_getppid() {
++	// fuck u too
++	return 0;
++}
 +
 +uid_t sys_getuid() {
 +	mlibc::infoLogger() << "mlibc: " << __func__ << " is a stub!\n" << frg::endlog;
@@ -469,9 +489,15 @@ index 0000000..6d1b690
 +	return ENOSYS;
 +}
 +
-+int sys_clock_get(int clock, time_t *secs, long *nanos) STUB_ONLY;
++int sys_clock_get(int clock, time_t *secs, long *nanos) 
++{
++	return ENOSYS;
++}
 +
-+int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) STUB_ONLY;
++int sys_stat(fsfd_target fsfdt, int fd, const char *path, int flags, struct stat *statbuf) 
++{
++	return ENOSYS;
++}
 +
 +int sys_faccessat(int dirfd, const char *pathname, int mode, int flags) STUB_ONLY;
 +
@@ -572,12 +598,26 @@ index 0000000..6d1b690
 +int sys_fork(pid_t *child) STUB_ONLY;
 +
 +int sys_execve(const char *path, char *const argv[], char *const envp[]) STUB_ONLY;
-+int sys_fcntl(int fd, int request, va_list args, int *result) STUB_ONLY;
-+int sys_dup(int fd, int flags, int *newfd) STUB_ONLY;
++int sys_fcntl(int fd, int request, va_list args, int *result) 
++{
++	return ENOSYS;
++}
++int sys_dup(int fd, int flags, int *newfd) 
++{
++	__syscall_ret ret = __syscall(8, fd);
++
++	if (ret.errno != 0)
++		return ret.errno;
++	*newfd = (ssize_t)ret.ret;
++	return 0;
++}
 +
 +int sys_dup2(int fd, int flags, int newfd) STUB_ONLY;
 +
-+int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restrict retrieve) STUB_ONLY;
++int sys_sigprocmask(int how, const sigset_t *__restrict set, sigset_t *__restrict retrieve) 
++{
++	return ENOSYS;
++}
 +
 +int sys_sigaction(int signum, const struct sigaction *act, struct sigaction *oldact) 
 +{
@@ -593,7 +633,10 @@ index 0000000..6d1b690
 +int sys_mount(const char *source, const char *target, const char *fstype, unsigned long flags, const void *data) STUB_ONLY;
 +int sys_umount2(const char *target, int flags) STUB_ONLY;
 +
-+int sys_gethostname(char *buffer, size_t bufsize) STUB_ONLY;
++int sys_gethostname(char *buffer, size_t bufsize) 
++{
++	return ENOSYS;
++}
 +
 +int sys_sethostname(const char *buffer, size_t bufsize) STUB_ONLY;
 +

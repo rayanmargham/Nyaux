@@ -25,7 +25,26 @@ void syscall_log_mlibc(struct syscall_frame *frame, struct per_thread_cpu_info_t
         kpanic("Mlibc Panicked!\n", NULL);
     }
 }
-
+void syscall_write(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr)
+{
+    int fd = frame->rsi;
+    void *buf = (void*)frame->rdx;
+    size_t count = frame->r10;
+    if (fd == 1)
+    {
+        // SINCE WE DONT HAVE DEVICES WE JUST WRITE DIRECTLY TO FLANTERM
+        flanterm_write(ctx, buf, count);
+        frame->rdx = 0;
+        frame->rax = count;
+        return;
+    }
+    else {
+        kprintf("syscall_write: failure at fd: %d\n", fd);
+        frame->rdx = -1;
+        return;
+    }
+    
+}
 void syscall_mmap(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr)
 {
     kprintf("syscall_mmap()\n");
@@ -83,9 +102,9 @@ void syscall_mmap(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr
 }
 void syscall_openat(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr)
 {
-    kprintf("syscall_openat()\n");
     int dirfd = frame->rsi;
     char *pathname = (char*)frame->rdx;
+    kprintf("syscall_openat(): looking for path %s\n", pathname);
     switch (dirfd)
     {
         case -100:
@@ -96,6 +115,7 @@ void syscall_openat(struct syscall_frame *frame, struct per_thread_cpu_info_t *p
             {
                 
                 int fd = allocate_fd_from_bitmap(process->descriptor_bitmap, 256);
+                kprintf("syscall_openat: allocated fd %d\n");
                 process->Descriptors[fd].ptr = ptr;
                 process->Descriptors[fd].offset = 0;
                 frame->rax = fd;
@@ -229,6 +249,13 @@ void syscall_fs(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr)
     kprintf("syscall_fs(): setting fs base to %p\n", q);
     writemsr(0xC0000100, (uint64_t)q);
 }
+void syscall_dup(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr)
+{
+    int fd = frame->rsi;
+    kprintf("he requested to duplicate file descriptor %d\n", fd);
+    frame->rdx = -1; // error out
+    return;
+}
 void syscall_init()
 {
     RegisterSyscall(0, syscall_log_mlibc);
@@ -238,4 +265,6 @@ void syscall_init()
     RegisterSyscall(4, syscall_close);
     RegisterSyscall(5, syscall_seek);
     RegisterSyscall(6, syscall_fs);
+    RegisterSyscall(7, syscall_write);
+    RegisterSyscall(8, syscall_dup);
 }
