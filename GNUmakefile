@@ -28,7 +28,7 @@ distro-full: jinx
 
 .PHONY: distro-base
 distro-base: jinx
-	./jinx build base-files kernel
+	./jinx build base-files kernel mlibc bash
 
 .PHONY: run-kvm
 run-kvm: nyaux.iso
