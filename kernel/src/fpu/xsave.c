@@ -26,7 +26,7 @@ void setup_xsave()
 {
     update_cr4((uint64_t)read_cr4() | (1 << 18)); // enable xsave
     xsave_size = cpuid(0xd, 0).ecx;
-    bool cpu_has_avx = (cpuid(1, 0).edx & CPUID_FEAT_ECX_AV) != 0;
+    bool cpu_has_avx = (cpuid(1, 0).ecx & CPUID_FEAT_ECX_AV) != 0;
     if (cpu_has_avx)
     {
         kprintf("CPU HAS AVX!\n");
@@ -34,6 +34,6 @@ void setup_xsave()
     }
     else {
         kprintf("CPU NO AVX :pensive:\n");
-        xsetbv(0, 2); // DONT ENABLE AVX LOL
+        xsetbv(0, 3); // DONT ENABLE AVX LOL
     }
 }
