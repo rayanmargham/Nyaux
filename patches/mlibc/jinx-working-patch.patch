@@ -128,7 +128,7 @@ index 0000000..d6e800c
 +}
 diff --git mlibc-workdir/sysdeps/nyaux/generic/generic.cpp mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 new file mode 100644
-index 0000000..0d604be
+index 0000000..55d3a2b
 --- /dev/null
 +++ mlibc-workdir/sysdeps/nyaux/generic/generic.cpp
 @@ -0,0 +1,529 @@
@@ -377,7 +377,7 @@ index 0000000..0d604be
 +	{
 +		return ret.errno;
 +	}
-+	*bytes_read = count;
++	*bytes_read = ret.ret;
 +	return 0;
 +}
 +

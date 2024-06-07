@@ -150,6 +150,7 @@ void syscall_read(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr
             ((char*)buf)[0] = '\n';
             frame->rdx = 0;
             frame->rax = sizeof(char);
+            kprintf("read(): stdin was read\n");
             return;
         }
     }
@@ -176,7 +177,7 @@ void syscall_read(struct syscall_frame *frame, struct per_thread_cpu_info_t *ptr
             return;
         }
         else {
-            // kprintf("Clearly exists\n");
+            kprintf("read(): descriptor of value %d was not found\n", fd);
             frame->rdx = -1;
             return;
         }
