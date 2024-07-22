@@ -159,14 +159,14 @@ void uacpi_kernel_free(void *mem, uacpi_size size_hint)
 {
     kfree(mem, size_hint);
 }
-void uacpi_kernel_log(enum uacpi_log_level level, const char* meow, ...)
+void uacpi_kernel_log(enum uacpi_log_level level, const uacpi_char* meow, ...)
 {
     va_list list;
     va_start(list, meow);
     uacpi_kernel_vlog(level, meow, list);
     va_end(list);
 }
-void uacpi_kernel_vlog(enum uacpi_log_level level, const char* format, uacpi_va_list list)
+void uacpi_kernel_vlog(enum uacpi_log_level level, const uacpi_char* format, uacpi_va_list list)
 {
     const char* prefix = "UNKNOWN";
 		switch (level)
@@ -277,4 +277,9 @@ uacpi_status uacpi_kernel_schedule_work(
 uacpi_status uacpi_kernel_wait_for_work_completion(void)
 {
     return UACPI_STATUS_UNIMPLEMENTED;
+}
+
+uacpi_thread_id uacpi_kernel_get_thread_id(void)
+{
+	return 0; //fuck u
 }

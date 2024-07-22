@@ -2,7 +2,7 @@
 # Code is governed by the GPL-2.0 license.
 # Copyright (C) 2021-2022 The Vinix authors.
 
-QEMUFLAGS ?= -M q35,smm=off -m 1G -cdrom nyaux.iso -serial stdio -smp 4
+QEMUFLAGS ?= -M q35,smm=off -m 1G -cdrom nyaux.iso -serial /dev/pts/1 -smp 4
 
 .PHONY: all
 all:

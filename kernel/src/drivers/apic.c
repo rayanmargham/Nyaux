@@ -116,7 +116,10 @@ void apic_init()
     char wow[64];
     uacpi_table *table;
     uacpi_table_find_by_signature(ACPI_MADT_SIGNATURE, &table);
-    struct acpi_madt *madt = table->virt_addr;
+    struct acpi_madt *madt = table;
+    kprintf("addr of madt: %lx\n", madt);
+    kprintf("madt hdr length: %d\n", madt->hdr.length);
+    kprintf("size of table: %d\n", sizeof(*madt));
     uint64_t length_of_entries = madt->hdr.length - sizeof(*madt);
     size_t offset = 0;
     while (offset < length_of_entries)
@@ -171,7 +174,7 @@ void apic_init()
             asm ("hlt");
         }
     }
-    struct acpi_hpet *hpet = h->virt_addr;
+    struct acpi_hpet *hpet = h;
     if (hpet->address.address_space_id != ACPI_AS_ID_SYS_MEM)
     {
         serial_print("HPET ISNT MEMORY MAPPED IO, SHIT MY PANTS WE GIVE UP\n");
